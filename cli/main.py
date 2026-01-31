@@ -290,5 +290,23 @@ from oneshot.cli import app as oneshot_app
 app.add_typer(oneshot_app, name="oneshot")
 
 
+# =============================================================================
+# PRIVATE EXTENSIONS (loaded from ~/coding-scripts/private/cli if exists)
+# =============================================================================
+
+try:
+    from pathlib import Path
+    private_cli = Path.home() / "coding-scripts" / "private" / "cli"
+    if private_cli.exists() and (private_cli / "extensions.py").exists():
+        import sys
+        sys.path.insert(0, str(private_cli))
+        from extensions import register_private_commands
+        register_private_commands(app, typer, console, require_github_token)
+except Exception as e:
+    import os
+    if os.environ.get("CDS_DEBUG"):
+        print(f"Extension load error: {e}")
+
+
 if __name__ == "__main__":
     app()
