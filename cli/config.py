@@ -25,7 +25,6 @@ COMMAND_CENTER_DIR = DATA_DIR / "command-center"
 REPO_DATA_FILE = COMMAND_CENTER_DIR / "repo_data.json"
 REPO_NOTES_FILE = COMMAND_CENTER_DIR / "repo_notes.csv"
 NOTES_DIR = ROOT_DIR / "notes"
-REDDIT_LINKS_FILE = NOTES_DIR / "misc" / "reddit_links.txt"
 
 # Clone target directories (sibling to coding-scripts)
 HOME_DIR = Path.home()

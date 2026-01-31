@@ -21,7 +21,6 @@ Top-level commands:
     ct analyze-issues   - Analyze issues using Claude
     ct clone-nodes      - Clone all ComfyUI nodes
     ct pull-nodes       - Pull latest changes for all ComfyUI nodes
-    ct clone-wheels     - Clone all wheel repos
     ct clone-utils      - Clone all comfy-* utility repos
 """
 
@@ -204,16 +203,6 @@ def pull_nodes():
     require_github_token()
     from commands.clone_all import pull_all_repos
     pull_all_repos()
-
-
-@app.command("clone-wheels")
-def clone_wheels(
-    pull: bool = typer.Option(False, "--pull", "-p", help="Pull latest changes for existing repos"),
-):
-    """Clone all wheel repos to ~/wheel_repos/."""
-    require_github_token()
-    from commands.clone_wheel_repos import clone_wheel_repos
-    clone_wheel_repos(pull)
 
 
 @app.command("clone-utils")
