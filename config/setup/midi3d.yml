@@ -1,0 +1,5 @@
+folder_name: midi3d
+conda_env_name: midi3d
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-MIDI3D

@@ -1,0 +1,5 @@
+folder_name: geometrypack
+conda_env_name: geometrypack
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-GeometryPack

@@ -1,0 +1,5 @@
+folder_name: detailgen3d
+conda_env_name: detailgen3d
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-DetailGen3D

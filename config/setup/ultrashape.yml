@@ -1,0 +1,5 @@
+folder_name: ultrashape
+conda_env_name: ultrashape
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-UltraShape

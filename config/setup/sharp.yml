@@ -1,0 +1,5 @@
+folder_name: sharp
+conda_env_name: sharp
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-Sharp

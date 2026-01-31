@@ -1,0 +1,6 @@
+name: ActionMesh
+package_name: ComfyUI-ActionMesh
+github: https://github.com/facebookresearch/actionmesh
+huggingface: https://huggingface.co/facebook/ActionMesh
+paper: https://remysabathier.github.io/actionmesh/actionmesh_2026.pdf
+website: https://remysabathier.github.io/actionmesh/

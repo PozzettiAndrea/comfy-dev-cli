@@ -1,0 +1,5 @@
+folder_name: depthanythingv3
+conda_env_name: depthanythingv3
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-DepthAnythingV3

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ repo_name }} Issues - repo-tools</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <nav class="bg-gray-800 p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-cyan-400">repo-tools</h1>
+            <div class="space-x-4">
+                <a href="/" class="hover:text-cyan-400">Overview</a>
+                <a href="/repos" class="hover:text-cyan-400">Repos</a>
+                <a href="/issue-analysis" class="text-cyan-400">Issue Analysis</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-6">
+        <!-- Breadcrumb -->
+        <div class="text-sm text-gray-400 mb-4">
+            <a href="/issue-analysis" class="hover:text-cyan-400">Issue Analysis</a>
+            <span class="mx-2">/</span>
+            <span class="text-white">{{ repo_name }}</span>
+        </div>
+
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold">{{ repo_name }}</h2>
+            {% if repo %}
+            <a href="{{ repo.github_url }}" target="_blank" class="text-gray-400 hover:text-cyan-400">
+                View on GitHub
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Sort controls -->
+        <div class="bg-gray-800 rounded-lg p-4 mb-6 flex items-center gap-4">
+            <span class="text-gray-400">Sort by:</span>
+            <a href="?sort=actionability" class="px-3 py-1 rounded {% if current_sort == 'actionability' %}bg-cyan-600 text-white{% else %}bg-gray-700 hover:bg-gray-600{% endif %}">
+                Actionability
+            </a>
+            <a href="?sort=effort" class="px-3 py-1 rounded {% if current_sort == 'effort' %}bg-cyan-600 text-white{% else %}bg-gray-700 hover:bg-gray-600{% endif %}">
+                Effort
+            </a>
+            <a href="?sort=confidence" class="px-3 py-1 rounded {% if current_sort == 'confidence' %}bg-cyan-600 text-white{% else %}bg-gray-700 hover:bg-gray-600{% endif %}">
+                Confidence
+            </a>
+            <a href="?sort=risk" class="px-3 py-1 rounded {% if current_sort == 'risk' %}bg-cyan-600 text-white{% else %}bg-gray-700 hover:bg-gray-600{% endif %}">
+                Risk
+            </a>
+        </div>
+
+        <!-- Analyzed issues -->
+        {% if analyzed %}
+        <div class="mb-8">
+            <h3 class="text-xl font-bold mb-4 text-green-400">Analyzed Issues ({{ analyzed|length }})</h3>
+            <div class="bg-gray-800 rounded-lg overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-gray-400 border-b border-gray-700 text-xs uppercase">
+                            <th class="p-3">Issue</th>
+                            <th class="p-3 text-center w-20">Effort</th>
+                            <th class="p-3 text-center w-20">Conf</th>
+                            <th class="p-3 text-center w-20">Risk</th>
+                            <th class="p-3 text-center w-24">Action</th>
+                            <th class="p-3 w-24">Category</th>
+                            <th class="p-3">Summary</th>
+                            <th class="p-3 w-20">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for issue in analyzed %}
+                        {% set effort = issue.analysis.effort %}
+                        {% set conf = issue.analysis.confidence %}
+                        {% set risk = issue.analysis.risk_of_regression %}
+                        {% set effort_val = 1.0 if effort == 'quick-fix' else (2.0 if effort == 'moderate' else 3.0) %}
+                        {% set conf_val = 3.0 if conf == 'high' else (2.0 if conf == 'medium' else 1.0) %}
+                        {% set risk_val = 1.0 if risk == 'low' else (2.0 if risk == 'medium' else 3.0) %}
+                        {% set action_score = (effort_val + (4.0 - conf_val) + risk_val) / 3.0 %}
+                        <tr class="border-b border-gray-700 hover:bg-gray-700 cursor-pointer" onclick="window.location='/issue-analysis/{{ repo_name }}/{{ issue.number }}'">
+                            <td class="p-3">
+                                <a href="/issue-analysis/{{ repo_name }}/{{ issue.number }}" class="text-cyan-400 hover:underline font-medium">
+                                    #{{ issue.number }}
+                                </a>
+                                <span class="text-gray-300 ml-1">{{ issue.title[:40] }}{% if issue.title|length > 40 %}...{% endif %}</span>
+                                {% if issue.is_stale %}
+                                <span class="bg-orange-500 text-black px-1 py-0.5 rounded text-xs font-bold ml-1">STALE</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-3 text-center font-mono
+                                {% if effort == 'quick-fix' %}text-green-400 bg-green-900/30
+                                {% elif effort == 'moderate' %}text-yellow-400 bg-yellow-900/30
+                                {% else %}text-red-400 bg-red-900/30{% endif %}">
+                                {{ "%.1f"|format(effort_val) }}
+                            </td>
+                            <td class="p-3 text-center font-mono
+                                {% if conf == 'high' %}text-green-400 bg-green-900/30
+                                {% elif conf == 'medium' %}text-yellow-400 bg-yellow-900/30
+                                {% else %}text-red-400 bg-red-900/30{% endif %}">
+                                {{ "%.1f"|format(conf_val) }}
+                            </td>
+                            <td class="p-3 text-center font-mono
+                                {% if risk == 'low' %}text-green-400 bg-green-900/30
+                                {% elif risk == 'medium' %}text-yellow-400 bg-yellow-900/30
+                                {% else %}text-red-400 bg-red-900/30{% endif %}">
+                                {{ "%.1f"|format(risk_val) }}
+                            </td>
+                            <td class="p-3 text-center font-mono font-bold
+                                {% if action_score <= 1.5 %}text-green-400 bg-green-900/40
+                                {% elif action_score <= 2.0 %}text-cyan-400 bg-cyan-900/40
+                                {% elif action_score <= 2.5 %}text-yellow-400 bg-yellow-900/40
+                                {% else %}text-red-400 bg-red-900/40{% endif %}">
+                                {{ "%.2f"|format(action_score) }}
+                            </td>
+                            <td class="p-3 text-gray-400 text-xs">
+                                {{ issue.analysis.category }}
+                            </td>
+                            <td class="p-3 text-gray-300 text-xs">
+                                {{ (issue.analysis.summary or issue.analysis.probable_cause)[:60] }}{% if (issue.analysis.summary or issue.analysis.probable_cause)|length > 60 %}...{% endif %}
+                            </td>
+                            <td class="p-3 text-xs
+                                {% if issue.status == 'new' %}text-cyan-400
+                                {% elif issue.status == 'waiting-for-confirmation' %}text-orange-400
+                                {% else %}text-gray-500{% endif %}">
+                                {{ issue.status[:7] }}{% if issue.status|length > 7 %}..{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-gray-500 text-xs mt-2">
+                Effort: 1=quick-fix, 2=moderate, 3=major | Conf: 3=high, 2=medium, 1=low | Risk: 1=low, 2=medium, 3=high | Action: lower=better (avg of effort + inverse conf + risk)
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- Unanalyzed issues -->
+        {% if unanalyzed %}
+        <div>
+            <h3 class="text-xl font-bold mb-4 text-yellow-400">Unanalyzed Issues ({{ unanalyzed|length }})</h3>
+            <div class="bg-gray-800 rounded-lg p-4 border border-yellow-600">
+                <p class="text-gray-400 mb-4">
+                    Run <code class="text-cyan-400 bg-gray-700 px-2 py-1 rounded">repo-tools analyze-issues -r {{ repo_name }}</code> to analyze these issues.
+                </p>
+                <ul class="space-y-2">
+                    {% for issue in unanalyzed %}
+                    <li class="flex justify-between items-center">
+                        <a href="{{ issue.url }}" target="_blank" class="text-gray-300 hover:text-cyan-400">
+                            #{{ issue.number }} - {{ issue.title }}
+                        </a>
+                        <span class="text-gray-500 text-sm">{{ issue.created }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if not analyzed and not unanalyzed %}
+        <div class="bg-gray-800 rounded-lg p-8 text-center text-gray-500">
+            No issues found for this repository.
+        </div>
+        {% endif %}
+    </main>
+
+    <footer class="bg-gray-800 p-4 mt-8">
+        <div class="container mx-auto text-center text-gray-500">
+            repo-tools | Issue Analysis powered by Claude Code
+        </div>
+    </footer>
+</body>
+</html>

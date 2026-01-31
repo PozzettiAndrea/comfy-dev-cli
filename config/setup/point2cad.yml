@@ -1,0 +1,5 @@
+folder_name: point2cad
+conda_env_name: point2cad
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-Point2CAD

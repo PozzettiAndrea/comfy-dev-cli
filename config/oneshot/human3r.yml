@@ -1,0 +1,6 @@
+name: Human3r
+package_name: ComfyUI-Human3r
+github: https://github.com/fanegg/Human3R
+huggingface: https://huggingface.co/faneggg/human3r
+paper: https://arxiv.org/abs/2510.06219
+website: https://fanegg.github.io/Human3R/

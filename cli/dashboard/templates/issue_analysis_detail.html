@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>#{{ issue.number }} - {{ repo_name }} - repo-tools</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <nav class="bg-gray-800 p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-cyan-400">repo-tools</h1>
+            <div class="space-x-4">
+                <a href="/" class="hover:text-cyan-400">Overview</a>
+                <a href="/repos" class="hover:text-cyan-400">Repos</a>
+                <a href="/issue-analysis" class="text-cyan-400">Issue Analysis</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-6">
+        <!-- Breadcrumb -->
+        <div class="text-sm text-gray-400 mb-4">
+            <a href="/issue-analysis" class="hover:text-cyan-400">Issue Analysis</a>
+            <span class="mx-2">/</span>
+            <a href="/issue-analysis/{{ repo_name }}" class="hover:text-cyan-400">{{ repo_name }}</a>
+            <span class="mx-2">/</span>
+            <span class="text-white">#{{ issue.number }}</span>
+        </div>
+
+        <!-- Header -->
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h2 class="text-2xl font-bold mb-2">
+                    #{{ issue.number }} - {{ issue.title }}
+                    {% if issue.is_stale %}
+                    <span class="bg-orange-500 text-black px-2 py-1 rounded text-sm font-bold ml-2" title="New comments since analysis">
+                        STALE
+                    </span>
+                    {% endif %}
+                </h2>
+                <p class="text-gray-400">
+                    by {{ issue.author }} | analyzed {{ issue.analyzed_at[:16].replace('T', ' ') }}
+                </p>
+            </div>
+            <a href="{{ issue.url }}" target="_blank" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded">
+                View on GitHub
+            </a>
+        </div>
+
+        <!-- Status and badges -->
+        <div class="flex items-center gap-4 mb-6">
+            <!-- Status form -->
+            <form action="/issue-analysis/{{ repo_name }}/{{ issue.number }}/status" method="post" class="flex items-center gap-2">
+                <label class="text-gray-400">Status:</label>
+                <select name="status" onchange="this.form.submit()" class="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-white">
+                    <option value="new" {% if issue.status == 'new' %}selected{% endif %}>New</option>
+                    <option value="waiting-for-confirmation" {% if issue.status == 'waiting-for-confirmation' %}selected{% endif %}>Waiting for Confirmation</option>
+                    <option value="closed" {% if issue.status == 'closed' %}selected{% endif %}>Closed</option>
+                </select>
+            </form>
+
+            <!-- Badges -->
+            <div class="flex gap-2">
+                {% set effort = issue.analysis.effort %}
+                <span class="px-3 py-1 rounded text-sm font-medium
+                    {% if effort == 'quick-fix' %}bg-green-600 text-white
+                    {% elif effort == 'moderate' %}bg-yellow-600 text-black
+                    {% else %}bg-red-600 text-white{% endif %}">
+                    {{ effort }}
+                </span>
+                {% set conf = issue.analysis.confidence %}
+                <span class="px-3 py-1 rounded text-sm font-medium
+                    {% if conf == 'high' %}bg-purple-600 text-white
+                    {% elif conf == 'medium' %}bg-purple-400 text-white
+                    {% else %}bg-gray-500 text-white{% endif %}">
+                    {{ conf }} confidence
+                </span>
+                {% set risk = issue.analysis.risk_of_regression %}
+                <span class="px-3 py-1 rounded text-sm font-medium
+                    {% if risk == 'low' %}bg-green-700 text-white
+                    {% elif risk == 'medium' %}bg-yellow-700 text-black
+                    {% else %}bg-red-700 text-white{% endif %}">
+                    {{ risk }} regression risk
+                </span>
+                <span class="px-3 py-1 rounded text-sm bg-gray-600 text-white">
+                    {{ issue.analysis.category }}
+                </span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main analysis -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Summary -->
+                {% if issue.analysis.summary %}
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-cyan-400 mb-3">Summary</h3>
+                    <p class="text-gray-200">{{ issue.analysis.summary }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Probable Cause -->
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-cyan-400 mb-3">Probable Cause</h3>
+                    <p class="text-gray-200 whitespace-pre-wrap">{{ issue.analysis.probable_cause }}</p>
+                </div>
+
+                <!-- Uncertainty Notes -->
+                {% if issue.analysis.uncertainty_notes %}
+                <div class="bg-gray-800 rounded-lg p-6 border border-yellow-600">
+                    <h3 class="text-lg font-bold text-yellow-400 mb-3">Uncertainty Notes</h3>
+                    <p class="text-gray-200 whitespace-pre-wrap">{{ issue.analysis.uncertainty_notes }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Suggested Fix -->
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-green-400 mb-3">Suggested Fix</h3>
+                    <p class="text-gray-200 whitespace-pre-wrap">{{ issue.analysis.suggested_fix }}</p>
+                </div>
+
+                <!-- Related Files -->
+                {% if issue.analysis.related_files %}
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-cyan-400 mb-3">Related Files</h3>
+                    <ul class="space-y-1">
+                        {% for file in issue.analysis.related_files %}
+                        <li class="font-mono text-sm text-gray-300 bg-gray-700 px-3 py-1 rounded inline-block mr-2 mb-2">
+                            {{ file }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <!-- Related Issues -->
+                {% if issue.analysis.related_issues %}
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-cyan-400 mb-3">May Be Related To</h3>
+                    <div class="flex gap-2">
+                        {% for num in issue.analysis.related_issues %}
+                        <a href="/issue-analysis/{{ repo_name }}/{{ num }}" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-cyan-400">
+                            #{{ num }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Sidebar: Copy Context -->
+            <div class="space-y-6">
+                <div class="bg-gray-800 rounded-lg p-6 sticky top-6">
+                    <h3 class="text-lg font-bold text-cyan-400 mb-4">Claude Code Context</h3>
+                    <p class="text-gray-400 text-sm mb-4">
+                        Copy this context to paste into Claude Code for fixing this issue.
+                    </p>
+                    <textarea id="claude-context" readonly class="w-full h-64 bg-gray-900 text-gray-300 text-sm font-mono p-3 rounded border border-gray-700 resize-none">{{ claude_context }}</textarea>
+                    <button onclick="copyContext()" class="w-full mt-4 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-4 rounded transition-colors">
+                        Copy Context
+                    </button>
+                    <p id="copy-feedback" class="text-center text-green-400 text-sm mt-2 hidden">Copied!</p>
+                </div>
+
+                <!-- Quick actions -->
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-gray-400 mb-4">Quick Actions</h3>
+                    <div class="space-y-2">
+                        <a href="{{ issue.url }}" target="_blank" class="block w-full text-center bg-gray-700 hover:bg-gray-600 py-2 rounded">
+                            Open Issue on GitHub
+                        </a>
+                        <a href="/issue-analysis/{{ repo_name }}" class="block w-full text-center bg-gray-700 hover:bg-gray-600 py-2 rounded">
+                            Back to {{ repo_name }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 p-4 mt-8">
+        <div class="container mx-auto text-center text-gray-500">
+            repo-tools | Issue Analysis powered by Claude Code
+        </div>
+    </footer>
+
+    <script>
+        function copyContext() {
+            const textarea = document.getElementById('claude-context');
+            textarea.select();
+            document.execCommand('copy');
+
+            const feedback = document.getElementById('copy-feedback');
+            feedback.classList.remove('hidden');
+            setTimeout(() => {
+                feedback.classList.add('hidden');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

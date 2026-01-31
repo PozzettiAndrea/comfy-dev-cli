@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Private data (not published)
+private/
+data/
+logs/
+notes/
+
+# Legacy secrets location
+data/secrets/
+
+# Large binaries
+data/.7z-standalone/
+
+# Oneshot packages (cloned repos, papers, etc)
+data/oneshot-packages/
+
+# Build artifacts
+cli/build/
+cli/oneshot/oneshot.egg-info/
+*.egg-info/

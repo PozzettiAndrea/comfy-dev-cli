@@ -1,0 +1,5 @@
+folder_name: world
+conda_env_name: world
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-HY-WorldPlay

@@ -1,0 +1,5 @@
+folder_name: unirig
+conda_env_name: unirig
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-UniRig

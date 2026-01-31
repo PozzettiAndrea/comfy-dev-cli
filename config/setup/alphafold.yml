@@ -1,0 +1,5 @@
+folder_name: alphafold
+conda_env_name: alphafold
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-AlphaFold
