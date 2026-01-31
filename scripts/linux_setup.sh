@@ -26,6 +26,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # ================= cds CLI (global) ========
 uv tool install --force "$PROJECT_ROOT/cli"
+grep -q 'CDS_ROOT' ~/.bashrc || echo "export CDS_ROOT=\"$PROJECT_ROOT\"" >> ~/.bashrc
+export CDS_ROOT="$PROJECT_ROOT"
 echo "✅ cds installed globally"
 
 # ================= GitHub CLI ===============

@@ -155,6 +155,84 @@ def dev_activate(
 
 
 # =============================================================================
+# TOP-LEVEL ALIASES (hidden, for convenience)
+# =============================================================================
+
+@app.command("get", hidden=True)
+def top_get(
+    config_name: str = typer.Argument(None, help="Config name (e.g., trellis2, sam3, unirig)"),
+    reinstall: bool = typer.Option(False, "--reinstall", help="Delete existing folder and venv before fresh install"),
+):
+    """Set up a ComfyUI environment from a YAML config."""
+    dev_get(config_name, reinstall)
+
+
+@app.command("start", hidden=True)
+def top_start(
+    repo_name: str = typer.Argument(..., help="Repository/environment name (e.g., trellis2, sam3)"),
+    port: int = typer.Argument(8188, help="Port to run ComfyUI on"),
+    cpu: bool = typer.Option(False, "--cpu", help="Run in CPU-only mode"),
+):
+    """Start ComfyUI in a virtual environment."""
+    dev_start(repo_name, port, cpu)
+
+
+@app.command("test", hidden=True)
+def top_test(
+    repo_name: str = typer.Argument(..., help="Repository name (e.g., sam3dobjects, GeometryPack)"),
+    gpu: bool = typer.Option(False, "--gpu", "-g", help="Enable GPU (sets COMFY_TEST_GPU=1)"),
+    portable: bool = typer.Option(False, "--portable", "-P", help="Use windows-portable platform (Windows only)"),
+    direct: bool = typer.Option(False, "--direct", "-d", help="Run directly without Docker"),
+    workflow: str = typer.Option(None, "--workflow", "-W", help="Run only this specific workflow"),
+):
+    """Run comfy-test locally. Auto-detects OS and Docker availability."""
+    dev_test(repo_name, gpu, portable, direct, workflow)
+
+
+@app.command("publish", hidden=True)
+def top_publish(
+    repo_name: str = typer.Argument(..., help="Repository name (e.g., depthanythingv3)"),
+    push: bool = typer.Option(False, "--push", "-p", help="Push to remote (default: local only)"),
+    force: bool = typer.Option(False, "--force", "-f", help="Skip uncommitted changes check"),
+):
+    """Publish test results to gh-pages branch for GitHub Pages."""
+    dev_publish(repo_name, push, force)
+
+
+@app.command("show", hidden=True)
+def top_show(
+    repo_name: str = typer.Argument(..., help="Package name (e.g., geometrypack)"),
+    port: int = typer.Argument(8001, help="Port to serve on"),
+    regenerate: bool = typer.Option(False, "--regenerate", "-r", help="Regenerate HTML report"),
+):
+    """View test results in browser (local preview of gh-pages)."""
+    dev_show(repo_name, port, regenerate)
+
+
+@app.command("render", hidden=True)
+def top_render(
+    workflow_file: str = typer.Argument(..., help="Path to workflow JSON file"),
+    output: str = typer.Option(None, "-o", "--output", help="Output image path"),
+):
+    """Render a ComfyUI workflow JSON as an image."""
+    dev_render(workflow_file, output)
+
+
+@app.command("status", hidden=True)
+def top_status():
+    """Check for uncommitted changes in utils repos."""
+    dev_status()
+
+
+@app.command("activate", hidden=True)
+def top_activate(
+    env_name: str = typer.Argument(None, help="Environment name to activate"),
+):
+    """Print activation command for a ct environment. Use with: eval $(cds activate <env>)"""
+    dev_activate(env_name)
+
+
+# =============================================================================
 # MONITOR subcommand group
 # =============================================================================
 

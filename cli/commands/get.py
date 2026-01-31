@@ -61,7 +61,7 @@ def run_logged(cmd: list, check: bool = True, cwd=None) -> subprocess.CompletedP
 
 # Paths
 CLI_DIR = Path(__file__).parent.parent
-ROOT_DIR = CLI_DIR.parent
+ROOT_DIR = Path(os.environ["CDS_ROOT"]) if "CDS_ROOT" in os.environ else CLI_DIR.parent
 CONFIG_DIR = ROOT_DIR / "config" / "setup"
 
 

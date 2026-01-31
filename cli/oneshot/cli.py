@@ -16,6 +16,7 @@ Commands:
 """
 
 import json
+import os
 import subprocess
 import typer
 import yaml
@@ -37,7 +38,7 @@ from .extractors import (
 
 # Paths
 CLI_DIR = Path(__file__).parent.parent
-ROOT_DIR = CLI_DIR.parent
+ROOT_DIR = Path(os.environ["CDS_ROOT"]) if "CDS_ROOT" in os.environ else CLI_DIR.parent
 ONESHOT_CONFIG_DIR = ROOT_DIR / "config" / "oneshot"
 ONESHOTS_DIR = Path("/home/shadeform/oneshots")
 ONESHOT_CACHE_DIR = ONESHOTS_DIR  # Use same directory for everything
