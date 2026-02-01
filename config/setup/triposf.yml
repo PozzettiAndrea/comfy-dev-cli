@@ -1,0 +1,5 @@
+folder_name: triposf
+conda_env_name: triposf
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-TripoSF

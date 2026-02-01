@@ -1,0 +1,5 @@
+folder_name: bgpseg
+conda_env_name: bgpseg
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-BGPSeg

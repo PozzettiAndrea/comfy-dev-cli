@@ -1,0 +1,5 @@
+folder_name: sam3dbody
+conda_env_name: sam3dbody
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-SAM3DBody

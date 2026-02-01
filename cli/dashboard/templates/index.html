@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>repo-tools Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <nav class="bg-gray-800 p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-cyan-400">repo-tools</h1>
+            <div class="space-x-4">
+                <a href="/" class="hover:text-cyan-400">Overview</a>
+                <a href="/repos" class="hover:text-cyan-400">Repos</a>
+                <a href="/issue-analysis" class="hover:text-cyan-400">Issue Analysis</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-6">
+        <h2 class="text-3xl font-bold mb-8">Dashboard</h2>
+
+        <!-- Public nodes stats -->
+        <h3 class="text-xl font-bold mb-4 text-cyan-400">Public Nodes ({{ public_repos|length }})</h3>
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="text-gray-400 text-sm uppercase">Stars</h4>
+                <p class="text-3xl font-bold text-yellow-400">{{ public_stats.stars }}</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="text-gray-400 text-sm uppercase">Issues</h4>
+                <p class="text-3xl font-bold text-red-400">{{ public_stats.issues }}</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="text-gray-400 text-sm uppercase">Discussions</h4>
+                <p class="text-3xl font-bold text-purple-400">{{ public_stats.discussions }}</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="text-gray-400 text-sm uppercase">Unanswered</h4>
+                <p class="text-3xl font-bold text-pink-400">{{ public_stats.unanswered }}</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="text-gray-400 text-sm uppercase">Waiting on OP</h4>
+                <p class="text-3xl font-bold text-orange-400">{{ public_stats.waiting }}</p>
+            </div>
+        </div>
+
+        <!-- Public nodes table -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-8">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-700">
+                        <th class="pb-2">Name</th>
+                        <th class="pb-2 text-right">Stars</th>
+                        <th class="pb-2 text-right">Issues</th>
+                        <th class="pb-2 text-right">PRs</th>
+                        <th class="pb-2 text-right">Waiting for OP</th>
+                        <th class="pb-2 text-right">Discussions</th>
+                        <th class="pb-2 text-right">Unanswered</th>
+                        <th class="pb-2 text-right">tests main</th>
+                        <th class="pb-2 text-right">tests dev</th>
+                        <th class="pb-2 text-right">Forks</th>
+                        <th class="pb-2 text-right">Active Forks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for repo in public_repos|sort(attribute='stars', reverse=True) %}
+                    {% set stats = repo_stats.get(repo.name, {}) %}
+                    <tr class="border-b border-gray-700 hover:bg-gray-700">
+                        <td class="py-2">
+                            <a href="{{ repo.github_url }}" class="text-cyan-400 hover:underline" target="_blank">
+                                {{ repo.name }}
+                            </a>
+                        </td>
+                        <td class="py-2 text-right text-yellow-400">{{ repo.stars }}</td>
+                        <td class="py-2 text-right">
+                            {% if repo.open_issues %}
+                                <a href="/repos/{{ repo.name }}/issues" class="text-red-400 hover:underline">{{ repo.open_issues }}</a>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="py-2 text-right">
+                            {% if stats.open_prs %}
+                                <a href="{{ repo.github_url }}/pulls" class="text-blue-400 hover:underline" target="_blank">{{ stats.open_prs }}</a>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="py-2 text-right text-orange-400">{{ stats.waiting_on_op if stats.waiting_on_op else '-' }}</td>
+                        <td class="py-2 text-right">
+                            {% if stats.discussions %}
+                                <a href="/repos/{{ repo.name }}/discussions" class="text-purple-400 hover:underline">{{ stats.discussions }}</a>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="py-2 text-right">
+                            {% if stats.unanswered %}
+                                <a href="/repos/{{ repo.name }}/discussions" class="text-pink-400 hover:underline">{{ stats.unanswered }}</a>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="py-2 text-right">
+                            {% if stats.tests_passing_main == true %}
+                                <a href="{{ stats.tests_main_url }}" class="text-green-400 hover:underline" target="_blank">Pass</a>
+                            {% elif stats.tests_passing_main == false %}
+                                <a href="{{ stats.tests_main_url }}" class="text-red-400 hover:underline" target="_blank">Fail</a>
+                            {% else %}
+                                <span class="text-gray-500">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2 text-right">
+                            {% if stats.tests_passing_dev == true %}
+                                <a href="{{ stats.tests_dev_url }}" class="text-green-400 hover:underline" target="_blank">Pass</a>
+                            {% elif stats.tests_passing_dev == false %}
+                                <a href="{{ stats.tests_dev_url }}" class="text-red-400 hover:underline" target="_blank">Fail</a>
+                            {% else %}
+                                <span class="text-gray-500">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2 text-right">{{ repo.forks }}</td>
+                        <td class="py-2 text-right">
+                            {% if stats.active_forks %}
+                                <a href="/repos/{{ repo.name }}/forks" class="text-green-400 hover:underline">{{ stats.active_forks }}</a>
+                            {% else %}-{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ComfyUI Utilities section -->
+        {% if comfyui_utilities %}
+        <h3 class="text-xl font-bold mb-4 text-green-400">ComfyUI Utilities ({{ comfyui_utilities|length }})</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="text-gray-400 text-sm uppercase">Stars</h4>
+                <p class="text-3xl font-bold text-yellow-400">{{ utilities_stats.stars }}</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="text-gray-400 text-sm uppercase">Issues</h4>
+                <p class="text-3xl font-bold text-red-400">{{ utilities_stats.issues }}</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="text-gray-400 text-sm uppercase">Forks</h4>
+                <p class="text-3xl font-bold text-blue-400">{{ comfyui_utilities|sum(attribute='forks') }}</p>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg p-6 mb-8">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-700">
+                        <th class="pb-2">Name</th>
+                        <th class="pb-2 text-right">Stars</th>
+                        <th class="pb-2 text-right">Issues</th>
+                        <th class="pb-2 text-right">tests main</th>
+                        <th class="pb-2 text-right">tests dev</th>
+                        <th class="pb-2 text-right">Forks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for repo in comfyui_utilities|sort(attribute='stars', reverse=True) %}
+                    {% set stats = repo_stats.get(repo.name, {}) %}
+                    <tr class="border-b border-gray-700 hover:bg-gray-700">
+                        <td class="py-2">
+                            <a href="{{ repo.github_url }}" class="text-green-400 hover:underline" target="_blank">
+                                {{ repo.name }}
+                            </a>
+                        </td>
+                        <td class="py-2 text-right text-yellow-400">{{ repo.stars }}</td>
+                        <td class="py-2 text-right">
+                            {% if repo.open_issues %}
+                                <a href="/repos/{{ repo.name }}/issues" class="text-red-400 hover:underline">{{ repo.open_issues }}</a>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="py-2 text-right">
+                            {% if stats.tests_passing_main == true %}
+                                <a href="{{ stats.tests_main_url }}" class="text-green-400 hover:underline" target="_blank">Pass</a>
+                            {% elif stats.tests_passing_main == false %}
+                                <a href="{{ stats.tests_main_url }}" class="text-red-400 hover:underline" target="_blank">Fail</a>
+                            {% else %}
+                                <span class="text-gray-500">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2 text-right">
+                            {% if stats.tests_passing_dev == true %}
+                                <a href="{{ stats.tests_dev_url }}" class="text-green-400 hover:underline" target="_blank">Pass</a>
+                            {% elif stats.tests_passing_dev == false %}
+                                <a href="{{ stats.tests_dev_url }}" class="text-red-400 hover:underline" target="_blank">Fail</a>
+                            {% else %}
+                                <span class="text-gray-500">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2 text-right">{{ repo.forks }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Misc Geometry section -->
+        {% if misc_geometry %}
+        <h3 class="text-xl font-bold mb-4 text-amber-400">Misc Geometry ({{ misc_geometry|length }})</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="text-gray-400 text-sm uppercase">Stars</h4>
+                <p class="text-3xl font-bold text-yellow-400">{{ geometry_stats.stars }}</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="text-gray-400 text-sm uppercase">Issues</h4>
+                <p class="text-3xl font-bold text-red-400">{{ geometry_stats.issues }}</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="text-gray-400 text-sm uppercase">Forks</h4>
+                <p class="text-3xl font-bold text-blue-400">{{ misc_geometry|sum(attribute='forks') }}</p>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg p-6 mb-8">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-700">
+                        <th class="pb-2">Name</th>
+                        <th class="pb-2 text-right">Stars</th>
+                        <th class="pb-2 text-right">Issues</th>
+                        <th class="pb-2 text-right">tests main</th>
+                        <th class="pb-2 text-right">tests dev</th>
+                        <th class="pb-2 text-right">Forks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for repo in misc_geometry|sort(attribute='stars', reverse=True) %}
+                    {% set stats = repo_stats.get(repo.name, {}) %}
+                    <tr class="border-b border-gray-700 hover:bg-gray-700">
+                        <td class="py-2">
+                            <a href="{{ repo.github_url }}" class="text-amber-400 hover:underline" target="_blank">
+                                {{ repo.name }}
+                            </a>
+                        </td>
+                        <td class="py-2 text-right text-yellow-400">{{ repo.stars }}</td>
+                        <td class="py-2 text-right">
+                            {% if repo.open_issues %}
+                                <a href="/repos/{{ repo.name }}/issues" class="text-red-400 hover:underline">{{ repo.open_issues }}</a>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="py-2 text-right">
+                            {% if stats.tests_passing_main == true %}
+                                <a href="{{ stats.tests_main_url }}" class="text-green-400 hover:underline" target="_blank">Pass</a>
+                            {% elif stats.tests_passing_main == false %}
+                                <a href="{{ stats.tests_main_url }}" class="text-red-400 hover:underline" target="_blank">Fail</a>
+                            {% else %}
+                                <span class="text-gray-500">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2 text-right">
+                            {% if stats.tests_passing_dev == true %}
+                                <a href="{{ stats.tests_dev_url }}" class="text-green-400 hover:underline" target="_blank">Pass</a>
+                            {% elif stats.tests_passing_dev == false %}
+                                <a href="{{ stats.tests_dev_url }}" class="text-red-400 hover:underline" target="_blank">Fail</a>
+                            {% else %}
+                                <span class="text-gray-500">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2 text-right">{{ repo.forks }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Private nodes section -->
+        {% if private_repos %}
+        <h3 class="text-xl font-bold mb-4 text-gray-400">Private Nodes ({{ private_repos|length }})</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="text-gray-400 text-sm uppercase">Issues</h4>
+                <p class="text-3xl font-bold text-red-400">{{ private_stats.issues }}</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="text-gray-400 text-sm uppercase">Discussions</h4>
+                <p class="text-3xl font-bold text-purple-400">{{ private_stats.discussions }}</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h4 class="text-gray-400 text-sm uppercase">Waiting on OP</h4>
+                <p class="text-3xl font-bold text-orange-400">{{ private_stats.waiting }}</p>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg p-6">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-700">
+                        <th class="pb-2">Name</th>
+                        <th class="pb-2 text-right">Issues</th>
+                        <th class="pb-2 text-right">PRs</th>
+                        <th class="pb-2 text-right">Waiting for OP</th>
+                        <th class="pb-2 text-right">Discussions</th>
+                        <th class="pb-2 text-right">tests main</th>
+                        <th class="pb-2 text-right">tests dev</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for repo in private_repos|sort(attribute='name') %}
+                    {% set stats = repo_stats.get(repo.name, {}) %}
+                    <tr class="border-b border-gray-700 hover:bg-gray-700">
+                        <td class="py-2">
+                            <a href="{{ repo.github_url }}" class="text-gray-400 hover:underline" target="_blank">
+                                {{ repo.name }}
+                            </a>
+                        </td>
+                        <td class="py-2 text-right">
+                            {% if repo.open_issues %}
+                                <a href="/repos/{{ repo.name }}/issues" class="text-red-400 hover:underline">{{ repo.open_issues }}</a>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="py-2 text-right">
+                            {% if stats.open_prs %}
+                                <a href="{{ repo.github_url }}/pulls" class="text-blue-400 hover:underline" target="_blank">{{ stats.open_prs }}</a>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="py-2 text-right text-orange-400">{{ stats.waiting_on_op if stats.waiting_on_op else '-' }}</td>
+                        <td class="py-2 text-right">
+                            {% if stats.discussions %}
+                                <a href="/repos/{{ repo.name }}/discussions" class="text-purple-400 hover:underline">{{ stats.discussions }}</a>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="py-2 text-right">
+                            {% if stats.tests_passing_main == true %}
+                                <a href="{{ stats.tests_main_url }}" class="text-green-400 hover:underline" target="_blank">Pass</a>
+                            {% elif stats.tests_passing_main == false %}
+                                <a href="{{ stats.tests_main_url }}" class="text-red-400 hover:underline" target="_blank">Fail</a>
+                            {% else %}
+                                <span class="text-gray-500">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2 text-right">
+                            {% if stats.tests_passing_dev == true %}
+                                <a href="{{ stats.tests_dev_url }}" class="text-green-400 hover:underline" target="_blank">Pass</a>
+                            {% elif stats.tests_passing_dev == false %}
+                                <a href="{{ stats.tests_dev_url }}" class="text-red-400 hover:underline" target="_blank">Fail</a>
+                            {% else %}
+                                <span class="text-gray-500">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </main>
+
+    <footer class="bg-gray-800 p-4 mt-8">
+        <div class="container mx-auto text-center text-gray-500">
+            repo-tools | Built with FastAPI + htmx
+        </div>
+    </footer>
+</body>
+</html>

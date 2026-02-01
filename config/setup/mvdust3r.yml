@@ -1,0 +1,5 @@
+folder_name: mvdust3r
+conda_env_name: mvdust3r
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-MVDUST3R

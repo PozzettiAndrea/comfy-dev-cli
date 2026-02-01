@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues - {{ repo_name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <nav class="bg-gray-800 p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-cyan-400">repo-tools</h1>
+            <div class="space-x-4">
+                <a href="/" class="hover:text-cyan-400">Overview</a>
+                <a href="/repos" class="hover:text-cyan-400">Repos</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-6">
+        <div class="mb-4">
+            <a href="/" class="text-gray-400 hover:text-cyan-400">&larr; Back to Dashboard</a>
+        </div>
+
+        <h2 class="text-3xl font-bold mb-2">Open Issues</h2>
+        <p class="text-gray-400 mb-4">
+            <a href="{{ repo.github_url }}" class="text-cyan-400 hover:underline" target="_blank">{{ repo_name }}</a>
+        </p>
+
+        <div class="flex gap-4 mb-6">
+            <span class="bg-gray-800 px-3 py-1 rounded text-sm">
+                Total: <span class="text-red-400 font-bold">{{ issues|length }}</span>
+            </span>
+            <span class="bg-gray-800 px-3 py-1 rounded text-sm">
+                Waiting on OP: <span class="text-orange-400 font-bold">{{ waiting_count }}</span>
+            </span>
+        </div>
+
+        {% if issues %}
+        <div class="bg-gray-800 rounded-lg p-6">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-700">
+                        <th class="pb-2">#</th>
+                        <th class="pb-2">Title</th>
+                        <th class="pb-2">Author</th>
+                        <th class="pb-2 text-right">Comments</th>
+                        <th class="pb-2 text-right">Created</th>
+                        <th class="pb-2 text-right">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for issue in issues %}
+                    <tr class="border-b border-gray-700 hover:bg-gray-700">
+                        <td class="py-3 text-gray-500">{{ issue.number }}</td>
+                        <td class="py-3">
+                            <a href="{{ issue.url }}" class="text-cyan-400 hover:underline" target="_blank">
+                                {{ issue.title[:60] }}{% if issue.title|length > 60 %}...{% endif %}
+                            </a>
+                            {% for label in issue.labels[:3] %}
+                            <span class="ml-2 text-xs bg-gray-700 px-2 py-0.5 rounded">{{ label }}</span>
+                            {% endfor %}
+                        </td>
+                        <td class="py-3 text-gray-400">{{ issue.author }}</td>
+                        <td class="py-3 text-right">{{ issue.comments }}</td>
+                        <td class="py-3 text-right text-gray-500">{{ issue.created }}</td>
+                        <td class="py-3 text-right">
+                            {% if issue.waiting_on_op %}
+                                <span class="text-orange-400 font-bold">Waiting on OP</span>
+                            {% else %}
+                                <span class="text-gray-500">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bg-gray-800 rounded-lg p-6 text-center text-gray-400">
+            No open issues.
+        </div>
+        {% endif %}
+    </main>
+
+    <footer class="bg-gray-800 p-4 mt-8">
+        <div class="container mx-auto text-center text-gray-500">
+            repo-tools | Built with FastAPI + htmx
+        </div>
+    </footer>
+</body>
+</html>

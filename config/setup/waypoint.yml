@@ -1,0 +1,5 @@
+folder_name: waypoint
+conda_env_name: waypoint
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-WayPoint

@@ -1,0 +1,5 @@
+folder_name: secadnet
+conda_env_name: secadnet
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-SECADNET

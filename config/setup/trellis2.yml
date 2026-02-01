@@ -1,0 +1,5 @@
+folder_name: trellis2
+conda_env_name: trellis2
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-TRELLIS2

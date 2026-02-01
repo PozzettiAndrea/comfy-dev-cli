@@ -1,0 +1,5 @@
+folder_name: hpart
+conda_env_name: hpart
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-Hunyuan3D-Part

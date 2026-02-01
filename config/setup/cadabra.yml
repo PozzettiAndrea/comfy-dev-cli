@@ -1,0 +1,5 @@
+folder_name: cadabra
+conda_env_name: cadabra
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-CADabra

@@ -1,0 +1,6 @@
+name: VerseCrafter
+package_name: ComfyUI-VerseCrafter
+github: https://github.com/TencentARC/VerseCrafter
+huggingface: https://huggingface.co/TencentARC/VerseCrafter
+paper: https://arxiv.org/pdf/2501.05138
+website: https://sixiaozheng.github.io/VerseCrafter_page/

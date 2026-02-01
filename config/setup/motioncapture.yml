@@ -1,0 +1,5 @@
+folder_name: motioncapture
+conda_env_name: motioncapture
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-MotionCapture

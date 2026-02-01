@@ -1,0 +1,5 @@
+folder_name: cadrille
+conda_env_name: cadrille
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-Cadrille
