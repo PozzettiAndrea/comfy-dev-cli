@@ -59,10 +59,8 @@ def run_logged(cmd: list, check: bool = True, cwd=None) -> subprocess.CompletedP
     return subprocess.CompletedProcess(cmd, process.returncode, "\n".join(output_lines), "")
 
 
-# Paths
-CLI_DIR = Path(__file__).parent.parent
-ROOT_DIR = Path(os.environ["CDS_ROOT"]) if "CDS_ROOT" in os.environ else CLI_DIR.parent
-CONFIG_DIR = ROOT_DIR / "config" / "setup"
+# Paths - use fixed location so it works when installed globally
+CONFIG_DIR = Path.home() / "coding-scripts" / "comfy-dev-cli" / "config" / "setup"
 
 
 def list_configs():
