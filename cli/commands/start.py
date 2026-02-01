@@ -5,7 +5,7 @@ import platform
 from pathlib import Path
 from rich.console import Console
 
-from config import CT_ENVS_DIR, INSTALL_DIR, get_logger
+from config import CT_ENVS_DIR, INSTALL_DIR, get_logger, COMMAND_NAME
 
 console = Console()
 IS_WINDOWS = platform.system() == "Windows"
@@ -38,7 +38,7 @@ def start_comfyui(repo_name: str, port: int = 8188, cpu: bool = False) -> int:
 
     if not repo_path.exists():
         console.print(f"[red]ComfyUI not found at {repo_path}[/red]")
-        console.print(f"[dim]Run: ct get {repo_name}[/dim]")
+        console.print(f"[dim]Run: {COMMAND_NAME} get {repo_name}[/dim]")
         return 1
 
     main_py = repo_path / "main.py"
@@ -55,7 +55,7 @@ def start_comfyui(repo_name: str, port: int = 8188, cpu: bool = False) -> int:
 
     if not env_python.exists():
         console.print(f"[red]Virtual environment not found at {env_path}[/red]")
-        console.print(f"[dim]Run: ct get {repo_name}[/dim]")
+        console.print(f"[dim]Run: {COMMAND_NAME} get {repo_name}[/dim]")
         return 1
 
     # Auto-find available port

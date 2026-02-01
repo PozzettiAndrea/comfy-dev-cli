@@ -10,7 +10,7 @@ from pathlib import Path
 import yaml
 from rich.console import Console
 
-from config import UTILS_REPOS_DIR, CT_ENVS_DIR, INSTALL_DIR, get_logger
+from config import UTILS_REPOS_DIR, CT_ENVS_DIR, INSTALL_DIR, get_logger, COMMAND_NAME
 
 console = Console()
 IS_WINDOWS = platform.system() == "Windows"
@@ -72,7 +72,7 @@ def list_configs():
     for name in configs:
         console.print(f"  [cyan]{name}[/cyan]")
     console.print()
-    console.print("Usage: [green]ct get <config_name>[/green]")
+    console.print(f"Usage: [green]{COMMAND_NAME} get <config_name>[/green]")
 
 
 def setup_comfyui(config_name: str, reinstall: bool = False):
@@ -183,7 +183,7 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
     # Install local dev packages EARLY (so install.py uses local version with fixes)
     console.print("Installing local dev packages (editable)...")
     utils_dir = UTILS_REPOS_DIR
-    for pkg in ["comfy-env", "comfy-test"]:
+    for pkg in ["comfy-env", "comfy-test", "comfy-3d-viewers"]:
         pkg_path = utils_dir / pkg
         if pkg_path.exists():
             run_logged(["uv", "pip", "install", "-e", str(pkg_path), "--python", str(env_python)])
@@ -235,7 +235,7 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
                 isolated_pip = env_dir / "Scripts" / "pip.exe"  # Windows
             if isolated_pip.exists():
                 console.print(f"  Installing in isolated env: [cyan]{env_dir.name}[/cyan]")
-                for pkg in ["comfy-env", "comfy-test"]:
+                for pkg in ["comfy-env", "comfy-test", "comfy-3d-viewers"]:
                     pkg_path = utils_dir / pkg
                     if pkg_path.exists():
                         run_logged([str(isolated_pip), "install", "-e", str(pkg_path)], check=False)
@@ -243,12 +243,12 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
     # Install local dev packages LAST (to override any versions from custom node requirements)
     console.print("Installing local dev packages (editable)...")
     utils_dir = UTILS_REPOS_DIR
-    for pkg in ["comfy-env", "comfy-test"]:
+    for pkg in ["comfy-env", "comfy-test", "comfy-3d-viewers"]:
         pkg_path = utils_dir / pkg
         if pkg_path.exists():
             run_logged(["uv", "pip", "install", "-e", str(pkg_path), "--python", str(env_python)])
 
     console.print()
-    console.print(f"[green]Done![/green] Run with: [cyan]ct start {env_name}[/cyan]")
+    console.print(f"[green]Done![/green] Run with: [cyan]{COMMAND_NAME} start {env_name}[/cyan]")
     console.print(f"Or manually: [cyan]cd {comfyui_path} && \"{env_python}\" main.py[/cyan]")
     logger.info(f"Setup complete for {config_name}")

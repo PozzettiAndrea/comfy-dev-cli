@@ -3,19 +3,22 @@ import os
 import platform
 import subprocess
 import shutil
-import sys
 from pathlib import Path
 from rich.console import Console
 import yaml
 from commands.clone_utils import clone_utils_repos
 from commands.get import setup_comfyui, CONFIG_DIR, INSTALL_DIR
-from config import UTILS_REPOS_DIR
+from config import UTILS_REPOS_DIR, COMMAND_NAME
 
 console = Console()
 
 
 def ensure_comfy_test_installed() -> bool:
-    """Ensure utils/ folder exists and comfy-test is installed."""
+    """Ensure comfy-test is installed as a uv tool."""
+    # Check if comfy-test is already available
+    if shutil.which("comfy-test") is not None:
+        return True
+
     comfy_test_path = UTILS_REPOS_DIR / "comfy-test"
 
     # Check if utils/comfy-test exists, clone if not
@@ -23,18 +26,17 @@ def ensure_comfy_test_installed() -> bool:
         console.print("[yellow]Utils folder missing, cloning...[/yellow]")
         clone_utils_repos()
 
-    # Check if comfy-test is installed
-    if shutil.which("comfy-test") is None:
-        console.print("[yellow]Installing comfy-test in editable mode...[/yellow]")
-        result = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "-e", str(comfy_test_path)],
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode != 0:
-            console.print(f"[red]Failed to install comfy-test: {result.stderr}[/red]")
-            return False
-        console.print("[green]comfy-test installed successfully[/green]")
+    # Install comfy-test as a uv tool (like cds itself)
+    console.print("[yellow]Installing comfy-test as uv tool...[/yellow]")
+    result = subprocess.run(
+        ["uv", "tool", "install", "-e", str(comfy_test_path), "--force"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        console.print(f"[red]Failed to install comfy-test: {result.stderr}[/red]")
+        return False
+    console.print("[green]comfy-test installed successfully[/green]")
     return True
 
 
@@ -64,7 +66,7 @@ def run_test(
 
 
 def find_repo(repo_name: str) -> Path | None:
-    """Find repository in ct get environment, setting up if needed.
+    """Find repository in cds get environment, setting up if needed.
 
     Uses the structure: ~/{config_name}/ComfyUI/custom_nodes/{node_name}/
     This enables live debugging in a real ComfyUI environment.
@@ -114,8 +116,8 @@ def find_repo(repo_name: str) -> Path | None:
     # Check if environment exists
     if not repo_path.exists():
         console.print(f"[yellow]Environment not set up: {install_path}[/yellow]")
-        console.print(f"[cyan]Running ct get {config_file.stem}...[/cyan]")
-        setup_comfyui(config_file.stem, reinstall=False)
+        console.print(f"[cyan]Running {COMMAND_NAME} get {config_file.stem} --reinstall...[/cyan]")
+        setup_comfyui(config_file.stem, reinstall=True)  # Fresh install for safety
 
         # Verify it exists now
         if not repo_path.exists():
@@ -175,8 +177,8 @@ def run_direct(repo_path: Path, platform_name: str = "windows", gpu: bool = Fals
 
     console.print(f"[dim]Output: {output_dir}[/dim]")
 
-    # Build comfy-test command
-    cmd = ["comfy-test", "run", "--platform", platform_name, "--output-dir", str(output_dir)]
+    # Build comfy-test command (--clean for fresh isolated ComfyUI each time)
+    cmd = ["comfy-test", "run", "--clean", "--platform", platform_name, "--output-dir", str(output_dir)]
     if gpu:
         # Set env var for GPU mode
         os.environ["COMFY_TEST_GPU"] = "1"

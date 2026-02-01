@@ -41,6 +41,10 @@ ISSUES_DIR = INSTALL_DIR / "issues"
 # Central directory for uv virtual environments (like conda's envs/)
 CT_ENVS_DIR = HOME_DIR / "ct-envs"
 
+# Command name (configurable via command_name.txt)
+_COMMAND_NAME_FILE = ROOT_DIR / "comfy-dev-cli" / "command_name.txt"
+COMMAND_NAME = _COMMAND_NAME_FILE.read_text().strip() if _COMMAND_NAME_FILE.exists() else "ct"
+
 # GitHub owner - load from env var or identity.yml
 def _load_github_owner() -> str:
     if os.environ.get("GITHUB_OWNER"):

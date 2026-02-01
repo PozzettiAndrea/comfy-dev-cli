@@ -73,12 +73,11 @@ def dev_test(
     repo_name: str = typer.Argument(..., help="Repository name (e.g., sam3dobjects, GeometryPack)"),
     gpu: bool = typer.Option(False, "--gpu", "-g", help="Enable GPU (sets COMFY_TEST_GPU=1)"),
     portable: bool = typer.Option(False, "--portable", "-P", help="Use windows-portable platform (Windows only)"),
-    direct: bool = typer.Option(False, "--direct", "-d", help="Run directly without Docker"),
     workflow: str = typer.Option(None, "--workflow", "-W", help="Run only this specific workflow"),
 ):
-    """Run comfy-test locally. Auto-detects OS and Docker availability."""
+    """Run comfy-test locally."""
     from commands.test import run_test
-    raise SystemExit(run_test(repo_name, gpu=gpu, portable=portable, direct=direct, workflow=workflow))
+    raise SystemExit(run_test(repo_name, gpu=gpu, portable=portable, workflow=workflow))
 
 
 @dev_app.command("publish")
@@ -182,11 +181,10 @@ def top_test(
     repo_name: str = typer.Argument(..., help="Repository name (e.g., sam3dobjects, GeometryPack)"),
     gpu: bool = typer.Option(False, "--gpu", "-g", help="Enable GPU (sets COMFY_TEST_GPU=1)"),
     portable: bool = typer.Option(False, "--portable", "-P", help="Use windows-portable platform (Windows only)"),
-    direct: bool = typer.Option(False, "--direct", "-d", help="Run directly without Docker"),
     workflow: str = typer.Option(None, "--workflow", "-W", help="Run only this specific workflow"),
 ):
-    """Run comfy-test locally. Auto-detects OS and Docker availability."""
-    dev_test(repo_name, gpu, portable, direct, workflow)
+    """Run comfy-test locally."""
+    dev_test(repo_name, gpu, portable, workflow)
 
 
 @app.command("publish", hidden=True)
