@@ -177,11 +177,14 @@ def run_direct(repo_path: Path, platform_name: str = "windows", gpu: bool = Fals
 
     console.print(f"[dim]Output: {output_dir}[/dim]")
 
-    # Build comfy-test command (--clean for fresh isolated ComfyUI each time)
-    cmd = ["comfy-test", "run", "--clean", "--platform", platform_name, "--output-dir", str(output_dir)]
+    # Set env vars for comfy-test
+    os.environ["COMFY_TEST_LOGS_DIR"] = str(logs_dir)
+    os.environ["COMFY_TEST_WORKSPACE_DIR"] = str(logs_dir.parent / "workspaces")
     if gpu:
-        # Set env var for GPU mode
         os.environ["COMFY_TEST_GPU"] = "1"
+
+    # Build comfy-test command
+    cmd = ["comfy-test", "run", "--platform", platform_name]
     if verbose:
         cmd.append("--verbose")
     if workflow:
