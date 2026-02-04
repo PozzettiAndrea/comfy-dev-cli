@@ -27,7 +27,8 @@ git config --global core.longpaths true 2>$null
 # CLAUDE CODE
 # AI coding assistant - native installer with auto-updates
 # ============================================================================
-if (Get-Command claude -ErrorAction SilentlyContinue) {
+$claudeExe = "$env:USERPROFILE\.local\bin\claude.exe"
+if ((Get-Command claude -ErrorAction SilentlyContinue) -or (Test-Path $claudeExe)) {
     Write-Host "Claude Code already installed" -ForegroundColor DarkGray
 } else {
     Write-Host "Installing Claude Code..." -ForegroundColor Yellow
