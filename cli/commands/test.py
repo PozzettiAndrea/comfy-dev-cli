@@ -185,6 +185,8 @@ def run_direct(repo_path: Path, platform_name: str = "windows", gpu: bool = Fals
 
     # Build comfy-test command
     cmd = ["comfy-test", "run", "--platform", platform_name]
+    if gpu:
+        cmd.append("--gpu")
     if verbose:
         cmd.append("--verbose")
     if workflow:
