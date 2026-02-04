@@ -13,6 +13,9 @@ Write-Host "Downloading setup scripts..." -ForegroundColor Yellow
 # Create temp directory
 New-Item -ItemType Directory -Force -Path $setupDir | Out-Null
 
+# Clear previous reboot flag (allows clean re-runs)
+Remove-Item "$setupDir\.reboot-needed" -ErrorAction SilentlyContinue
+
 # Download all scripts
 $scripts = @(
     "01-windows-features.ps1",

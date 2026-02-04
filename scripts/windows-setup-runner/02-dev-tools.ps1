@@ -134,8 +134,14 @@ if (Test-Path $dockerExe) {
 # NETWORKING FIX
 # Disable RSC - fixes container networking issues on some systems
 # ============================================================================
-Write-Host "Disabling RSC (container networking fix)..." -ForegroundColor Yellow
-Get-NetAdapterRsc | Disable-NetAdapterRsc -ErrorAction SilentlyContinue
+$rscAdapters = Get-NetAdapterRsc | Where-Object { $_.IPv4Enabled -or $_.IPv6Enabled }
+if ($rscAdapters) {
+    Write-Host "Disabling RSC (container networking fix)..." -ForegroundColor Yellow
+    Get-NetAdapterRsc | Disable-NetAdapterRsc -ErrorAction SilentlyContinue
+    Write-Host "RSC disabled" -ForegroundColor Green
+} else {
+    Write-Host "RSC already disabled" -ForegroundColor DarkGray
+}
 
 # ============================================================================
 # ACT
