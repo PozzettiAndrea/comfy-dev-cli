@@ -1,0 +1,192 @@
+# =============================================================================
+# 03-GITHUB-RUNNERS.PS1
+# Downloads GitHub runners, creates cleanup script and desktop shortcuts
+# =============================================================================
+
+param(
+    [string]$SetupDir = "$env:TEMP\comfy-dev-setup"
+)
+
+$ErrorActionPreference = "Stop"
+
+# ============================================================================
+# RUNNER DIRECTORIES
+# Create folders for Windows and Linux runners
+# ============================================================================
+$runnerBaseDir = "$env:USERPROFILE\github-runners"
+$windowsRunnerDir = "$runnerBaseDir\windows"
+
+Write-Host "Creating runner directories..." -ForegroundColor Yellow
+New-Item -ItemType Directory -Force -Path $windowsRunnerDir | Out-Null
+Write-Host "Runner directories created at $runnerBaseDir" -ForegroundColor Green
+
+# ============================================================================
+# WINDOWS RUNNER
+# Download GitHub Actions runner for Windows
+# ============================================================================
+$windowsRunnerExe = "$windowsRunnerDir\run.cmd"
+if (Test-Path $windowsRunnerExe) {
+    Write-Host "Windows GitHub Runner already downloaded" -ForegroundColor DarkGray
+} else {
+    Write-Host "Downloading Windows GitHub Runner..." -ForegroundColor Yellow
+    $runnerVersion = "2.321.0"
+    $runnerUrl = "https://github.com/actions/runner/releases/download/v$runnerVersion/actions-runner-win-x64-$runnerVersion.zip"
+    $runnerZip = "$env:TEMP\actions-runner-win.zip"
+    Invoke-WebRequest $runnerUrl -OutFile $runnerZip
+    Expand-Archive $runnerZip $windowsRunnerDir -Force
+    Remove-Item $runnerZip
+    Write-Host "Windows GitHub Runner downloaded" -ForegroundColor Green
+}
+
+# ============================================================================
+# WINDOWS RUNNER CLEANUP SCRIPT
+# Runs between jobs to reset environment
+# ============================================================================
+$cleanupScript = @'
+@echo off
+echo === GitHub Runner Cleanup ===
+
+echo Killing stray processes...
+taskkill /F /IM python.exe 2>nul
+taskkill /F /IM python3.exe 2>nul
+taskkill /F /IM node.exe 2>nul
+taskkill /F /IM npm.exe 2>nul
+taskkill /F /IM conda.exe 2>nul
+
+echo Clearing temp directory...
+del /q /s %TEMP%\* 2>nul
+rd /s /q %TEMP%\pip-* 2>nul
+rd /s /q %TEMP%\npm-* 2>nul
+
+echo Clearing conda caches...
+if exist %USERPROFILE%\miniconda3\condabin\conda.bat (
+    call %USERPROFILE%\miniconda3\condabin\conda.bat clean --all -y 2>nul
+)
+
+echo Removing leftover containers...
+docker rm -f $(docker ps -aq) 2>nul
+docker system prune -f 2>nul
+
+echo Resetting GPU state...
+nvidia-smi --gpu-reset 2>nul
+
+echo Cleanup complete.
+'@
+$cleanupScript | Out-File -FilePath "$windowsRunnerDir\cleanup.cmd" -Encoding ASCII
+Write-Host "Windows runner cleanup script created" -ForegroundColor Green
+
+# ============================================================================
+# COPY WSL SETUP SCRIPT
+# Move to runner directory so it's accessible from Ubuntu
+# ============================================================================
+Copy-Item "$SetupDir\04-wsl-setup.sh" "$runnerBaseDir\04-wsl-setup.sh" -Force
+Write-Host "WSL setup script copied to $runnerBaseDir" -ForegroundColor Green
+
+# ============================================================================
+# REGISTER-RUNNER BATCH SCRIPT
+# Desktop shortcut to register both runners for any repo
+# ============================================================================
+$registerScript = @'
+@echo off
+setlocal enabledelayedexpansion
+
+echo ============================================
+echo   GitHub Runner Registration
+echo ============================================
+echo.
+
+set /p REPO="Enter repo (owner/repo): "
+
+if "%REPO%"=="" (
+    echo Error: No repo provided
+    pause
+    exit /b 1
+)
+
+echo.
+echo Checking GitHub CLI authentication...
+gh auth status >nul 2>&1
+if errorlevel 1 (
+    echo You need to login first.
+    gh auth login
+)
+
+echo.
+echo Getting registration token for %REPO%...
+for /f "tokens=*" %%i in ('gh api repos/%REPO%/actions/runners/registration-token --jq .token') do set TOKEN=%%i
+
+if "%TOKEN%"=="" (
+    echo Error: Could not get registration token. Check repo name and permissions.
+    pause
+    exit /b 1
+)
+
+echo.
+echo ============================================
+echo   Registering Windows Runner
+echo ============================================
+cd /d %USERPROFILE%\github-runners\windows
+
+:: Remove existing config if present
+if exist .runner (
+    echo Removing existing Windows runner configuration...
+    call config.cmd remove --token %TOKEN% 2>nul
+)
+
+call config.cmd --url https://github.com/%REPO% --token %TOKEN% --name windows-gpu --labels self-hosted,Windows,X64,gpu --runnergroup Default --work _work --replace
+
+echo.
+echo ============================================
+echo   Registering Linux Runner (WSL2)
+echo ============================================
+wsl -d Ubuntu -e bash -c "cd ~/github-runners/linux && ./config.sh remove --token %TOKEN% 2>/dev/null; ./config.sh --url https://github.com/%REPO% --token %TOKEN% --name linux-gpu-docker --labels self-hosted,Linux,X64,gpu,docker --runnergroup Default --work _work --replace"
+
+echo.
+echo ============================================
+echo   Starting Runners
+echo ============================================
+
+echo Starting Windows runner...
+start "Windows GitHub Runner" cmd /c "%USERPROFILE%\github-runners\windows\run.cmd"
+
+echo Starting Linux runner (WSL2)...
+start "Linux GitHub Runner" wsl -d Ubuntu -e bash -c "cd ~/github-runners/linux && ./run.sh"
+
+echo.
+echo ============================================
+echo   Both runners are now running!
+echo ============================================
+echo.
+echo Windows runner: windows-gpu (labels: self-hosted, Windows, X64, gpu)
+echo Linux runner:   linux-gpu-docker (labels: self-hosted, Linux, X64, gpu, docker)
+echo.
+echo Press any key to exit (runners will keep running)...
+pause >nul
+'@
+
+$desktopPath = [Environment]::GetFolderPath("Desktop")
+$registerScript | Out-File -FilePath "$desktopPath\Register-Runner.bat" -Encoding ASCII
+Write-Host "Register-Runner.bat created on Desktop" -ForegroundColor Green
+
+# ============================================================================
+# STOP-RUNNERS BATCH SCRIPT
+# Desktop shortcut to stop both runners gracefully
+# ============================================================================
+$stopScript = @'
+@echo off
+echo Stopping GitHub Runners...
+
+echo Stopping Windows runner...
+taskkill /FI "WINDOWTITLE eq Windows GitHub Runner*" 2>nul
+
+echo Stopping Linux runner...
+wsl -d Ubuntu -e bash -c "pkill -f 'Runner.Listener' 2>/dev/null"
+
+echo.
+echo Runners stopped.
+pause
+'@
+$stopScript | Out-File -FilePath "$desktopPath\Stop-Runners.bat" -Encoding ASCII
+Write-Host "Stop-Runners.bat created on Desktop" -ForegroundColor Green
+
+Write-Host "GitHub runners setup complete" -ForegroundColor Green
