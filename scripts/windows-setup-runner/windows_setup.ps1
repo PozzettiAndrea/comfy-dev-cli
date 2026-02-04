@@ -40,22 +40,6 @@ Write-Host ""
 Write-Host "=== Phase 1: Windows Features ===" -ForegroundColor Cyan
 & "$setupDir\01-windows-features.ps1"
 
-# Check if reboot is needed
-$rebootFlag = "$setupDir\.reboot-needed"
-if (Test-Path $rebootFlag) {
-    Write-Host ""
-    Write-Host "*** REBOOT REQUIRED ***" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "After reboot, run this again:" -ForegroundColor Yellow
-    Write-Host "  irm https://raw.githubusercontent.com/PozzettiAndrea/comfy-dev-cli/main/scripts/windows-setup-runner/windows_setup.ps1 | iex" -ForegroundColor Cyan
-    Write-Host ""
-    $restart = Read-Host "Restart now? (y/n)"
-    if ($restart -eq "y") {
-        Restart-Computer -Force
-    }
-    exit 0
-}
-
 # =============================================================================
 # PHASE 2: Dev Tools
 # =============================================================================
@@ -78,10 +62,29 @@ Write-Host "============================================" -ForegroundColor Green
 Write-Host "  Setup Complete!" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "Next steps:" -ForegroundColor Yellow
-Write-Host "  1. Open Ubuntu from Start Menu (first-time setup)" -ForegroundColor Cyan
-Write-Host "  2. In Ubuntu, run:" -ForegroundColor Cyan
-Write-Host "     bash /mnt/c/Users/$env:USERNAME/github-runners/04-wsl-setup.sh" -ForegroundColor White
-Write-Host "  3. Back in Windows, run: gh auth login" -ForegroundColor Cyan
-Write-Host "  4. Double-click 'Register-Runner.bat' on Desktop" -ForegroundColor Cyan
-Write-Host ""
+
+# Check if reboot is needed
+$rebootFlag = "$setupDir\.reboot-needed"
+if (Test-Path $rebootFlag) {
+    Write-Host "*** REBOOT REQUIRED ***" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "After reboot:" -ForegroundColor Yellow
+    Write-Host "  1. Open Ubuntu from Start Menu (first-time setup)" -ForegroundColor Cyan
+    Write-Host "  2. In Ubuntu, run:" -ForegroundColor Cyan
+    Write-Host "     bash /mnt/c/Users/$env:USERNAME/github-runners/04-wsl-setup.sh" -ForegroundColor White
+    Write-Host "  3. Back in Windows, run: gh auth login" -ForegroundColor Cyan
+    Write-Host "  4. Double-click 'Register-Runner.bat' on Desktop" -ForegroundColor Cyan
+    Write-Host ""
+    $restart = Read-Host "Restart now? (y/n)"
+    if ($restart -eq "y") {
+        Restart-Computer -Force
+    }
+} else {
+    Write-Host "Next steps:" -ForegroundColor Yellow
+    Write-Host "  1. Open Ubuntu from Start Menu (first-time setup)" -ForegroundColor Cyan
+    Write-Host "  2. In Ubuntu, run:" -ForegroundColor Cyan
+    Write-Host "     bash /mnt/c/Users/$env:USERNAME/github-runners/04-wsl-setup.sh" -ForegroundColor White
+    Write-Host "  3. Back in Windows, run: gh auth login" -ForegroundColor Cyan
+    Write-Host "  4. Double-click 'Register-Runner.bat' on Desktop" -ForegroundColor Cyan
+    Write-Host ""
+}
