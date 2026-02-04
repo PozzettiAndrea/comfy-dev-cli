@@ -1,6 +1,6 @@
 # =============================================================================
 # 02-DEV-TOOLS.PS1
-# Installs Git, Claude Code, Miniconda, uv, GitHub CLI, Docker, act
+# Installs Git, Claude Code, Miniconda, uv, GitHub CLI, zstd, tar, Docker, act
 # =============================================================================
 
 $ErrorActionPreference = "Stop"
@@ -82,6 +82,35 @@ if (Get-Command gh -ErrorAction SilentlyContinue) {
     Start-Process "msiexec.exe" -ArgumentList "/i",$msi,"/qn","/norestart" -Wait
     Remove-Item $msi
     Write-Host "GitHub CLI installed" -ForegroundColor Green
+}
+
+# ============================================================================
+# ZSTD
+# Fast compression tool - used by many package managers and build systems
+# ============================================================================
+if (Get-Command zstd -ErrorAction SilentlyContinue) {
+    Write-Host "zstd already installed" -ForegroundColor DarkGray
+} else {
+    Write-Host "Installing zstd..." -ForegroundColor Yellow
+    $url = "https://github.com/facebook/zstd/releases/download/v1.5.6/zstd-v1.5.6-win64.zip"
+    $zip = "$env:TEMP\zstd.zip"
+    Invoke-WebRequest $url -OutFile $zip
+    Expand-Archive $zip "$env:ProgramFiles\zstd" -Force
+    [Environment]::SetEnvironmentVariable("Path", "$env:ProgramFiles\zstd\zstd-v1.5.6-win64;" + [Environment]::GetEnvironmentVariable("Path","Machine"), "Machine")
+    $env:Path = "$env:ProgramFiles\zstd\zstd-v1.5.6-win64;" + $env:Path
+    Remove-Item $zip
+    Write-Host "zstd installed" -ForegroundColor Green
+}
+
+# ============================================================================
+# TAR
+# Archive utility - built into Windows 10+, verify it's available
+# ============================================================================
+if (Get-Command tar -ErrorAction SilentlyContinue) {
+    Write-Host "tar already available" -ForegroundColor DarkGray
+} else {
+    Write-Host "WARNING: tar not found. This should be built into Windows 10+." -ForegroundColor Red
+    Write-Host "  Please ensure you are running Windows 10 version 1803 or later." -ForegroundColor Yellow
 }
 
 # ============================================================================

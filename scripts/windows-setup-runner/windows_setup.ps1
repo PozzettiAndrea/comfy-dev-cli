@@ -1,10 +1,10 @@
 # =============================================================================
 # COMFY-DEV-CLI WINDOWS SETUP
-# One-liner: irm https://raw.githubusercontent.com/PozzettiAndrea/comfy-dev-cli/main/scripts/windows-runner-setup/windows_setup.ps1 | iex
+# One-liner: irm https://raw.githubusercontent.com/PozzettiAndrea/comfy-dev-cli/main/scripts/windows-setup-runner/windows_setup.ps1 | iex
 # =============================================================================
 
 $ErrorActionPreference = "Stop"
-$baseUrl = "https://raw.githubusercontent.com/PozzettiAndrea/comfy-dev-cli/main/scripts/windows-runner-setup"
+$baseUrl = "https://raw.githubusercontent.com/PozzettiAndrea/comfy-dev-cli/main/scripts/windows-setup-runner"
 $setupDir = "$env:TEMP\comfy-dev-setup"
 
 Write-Host "=== Comfy Dev CLI - Windows Setup ===" -ForegroundColor Cyan
@@ -44,7 +44,7 @@ if (Test-Path $rebootFlag) {
     Write-Host "*** REBOOT REQUIRED ***" -ForegroundColor Red
     Write-Host ""
     Write-Host "After reboot, run this again:" -ForegroundColor Yellow
-    Write-Host "  irm https://raw.githubusercontent.com/PozzettiAndrea/comfy-dev-cli/main/scripts/windows-runner-setup/windows_setup.ps1 | iex" -ForegroundColor Cyan
+    Write-Host "  irm https://raw.githubusercontent.com/PozzettiAndrea/comfy-dev-cli/main/scripts/windows-setup-runner/windows_setup.ps1 | iex" -ForegroundColor Cyan
     Write-Host ""
     $restart = Read-Host "Restart now? (y/n)"
     if ($restart -eq "y") {
