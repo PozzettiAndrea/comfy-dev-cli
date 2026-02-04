@@ -1,6 +1,6 @@
 # =============================================================================
 # 02-DEV-TOOLS.PS1
-# Installs Git, Claude Code, uv, GitHub CLI, zstd, tar, Docker
+# Installs Git, Claude Code, uv, GitHub CLI, zstd, 7-Zip, tar, Docker
 # =============================================================================
 
 $ErrorActionPreference = "Stop"
@@ -62,20 +62,26 @@ if (Get-Command gh -ErrorAction SilentlyContinue) {
 
 # ============================================================================
 # ZSTD
-# Fast compression tool - used by many package managers and build systems
+# Fast compression tool - installed via winget
 # ============================================================================
 if (Get-Command zstd -ErrorAction SilentlyContinue) {
     Write-Host "zstd already installed" -ForegroundColor DarkGray
 } else {
     Write-Host "Installing zstd..." -ForegroundColor Yellow
-    $url = "https://github.com/facebook/zstd/releases/download/v1.5.6/zstd-v1.5.6-win64.zip"
-    $zip = "$env:TEMP\zstd.zip"
-    Invoke-WebRequest $url -OutFile $zip
-    Expand-Archive $zip "$env:ProgramFiles\zstd" -Force
-    [Environment]::SetEnvironmentVariable("Path", "$env:ProgramFiles\zstd\zstd-v1.5.6-win64;" + [Environment]::GetEnvironmentVariable("Path","Machine"), "Machine")
-    $env:Path = "$env:ProgramFiles\zstd\zstd-v1.5.6-win64;" + $env:Path
-    Remove-Item $zip
+    winget install -e --id Facebook.zstd --silent --accept-package-agreements --accept-source-agreements
     Write-Host "zstd installed" -ForegroundColor Green
+}
+
+# ============================================================================
+# 7-ZIP
+# Archive utility for .7z files - installed via winget
+# ============================================================================
+if (Test-Path "C:\Program Files\7-Zip\7z.exe") {
+    Write-Host "7-Zip already installed" -ForegroundColor DarkGray
+} else {
+    Write-Host "Installing 7-Zip..." -ForegroundColor Yellow
+    winget install -e --id 7zip.7zip --silent --accept-package-agreements --accept-source-agreements
+    Write-Host "7-Zip installed" -ForegroundColor Green
 }
 
 # ============================================================================

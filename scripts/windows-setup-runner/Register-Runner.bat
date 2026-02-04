@@ -1,21 +1,38 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: Create log directory and set log file path
+set "LOGDIR=%USERPROFILE%\Desktop\runner_logs"
+if not exist "%LOGDIR%" mkdir "%LOGDIR%"
+for /f %%i in ('powershell -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set "TIMESTAMP=%%i"
+set "LOGFILE=%LOGDIR%\register_%TIMESTAMP%.log"
+
+echo Logging to: %LOGFILE%
+echo.
+
+:: Log header
+echo ============================================ > "%LOGFILE%"
+echo   GitHub Runner Registration - %date% %time% >> "%LOGFILE%"
+echo ============================================ >> "%LOGFILE%"
+
 echo ============================================
 echo   GitHub Runner Registration
 echo ============================================
 echo.
 
 set /p REPO="Enter repo (owner/repo): "
+echo Repo: %REPO% >> "%LOGFILE%"
 
 if "%REPO%"=="" (
     echo Error: No repo provided
+    echo Error: No repo provided >> "%LOGFILE%"
     pause
     exit /b 1
 )
 
 echo.
 echo Checking GitHub CLI authentication...
+echo Checking GitHub CLI authentication... >> "%LOGFILE%"
 gh auth status >nul 2>&1
 if errorlevel 1 (
     echo You need to login first.
@@ -24,52 +41,101 @@ if errorlevel 1 (
 
 echo.
 echo Getting registration token for %REPO%...
-for /f "tokens=*" %%i in ('gh api repos/%REPO%/actions/runners/registration-token --jq .token') do set TOKEN=%%i
+echo Getting registration token... >> "%LOGFILE%"
+for /f "tokens=*" %%i in ('gh api repos/%REPO%/actions/runners/registration-token -X POST --jq .token') do set TOKEN=%%i
 
 if "%TOKEN%"=="" (
     echo Error: Could not get registration token. Check repo name and permissions.
+    echo Error: Could not get registration token >> "%LOGFILE%"
     pause
     exit /b 1
 )
+echo Token obtained successfully >> "%LOGFILE%"
 
 echo.
 echo ============================================
 echo   Registering Windows Runner
 echo ============================================
-cd /d %USERPROFILE%\github-runners\windows
+echo. >> "%LOGFILE%"
+echo === Registering Windows Runner === >> "%LOGFILE%"
+
+:: Use C:\github-runners to avoid user profile permission issues
+set "RUNNER_DIR=C:\github-runners\windows"
+if not exist "%RUNNER_DIR%" (
+    echo Creating runner directory and downloading...
+    mkdir "%RUNNER_DIR%"
+    powershell -Command "Invoke-WebRequest -Uri 'https://github.com/actions/runner/releases/download/v2.321.0/actions-runner-win-x64-2.321.0.zip' -OutFile '%RUNNER_DIR%\runner.zip'; Expand-Archive -Path '%RUNNER_DIR%\runner.zip' -DestinationPath '%RUNNER_DIR%' -Force; Remove-Item '%RUNNER_DIR%\runner.zip'"
+)
+cd /d %RUNNER_DIR%
 
 :: Remove existing config if present
 if exist .runner (
     echo Removing existing Windows runner configuration...
-    call config.cmd remove --token %TOKEN% 2>nul
+    echo Removing existing config... >> "%LOGFILE%"
+    call config.cmd remove --token %TOKEN% >> "%LOGFILE%" 2>&1
 )
 
-call config.cmd --url https://github.com/%REPO% --token %TOKEN% --name windows-gpu --labels self-hosted,Windows,X64,gpu --runnergroup Default --work _work --replace
+echo Configuring Windows runner as service...
+echo Configuring Windows runner... >> "%LOGFILE%"
+(echo Y & echo.) | call config.cmd --url https://github.com/%REPO% --token %TOKEN% --name windows-gpu --labels self-hosted,Windows,X64,gpu --runnergroup Default --work _work --replace >> "%LOGFILE%" 2>&1
 
 echo.
 echo ============================================
 echo   Registering Linux Runner (WSL2)
 echo ============================================
-wsl -d Ubuntu -e bash -c "cd ~/github-runners/linux && ./config.sh remove --token %TOKEN% 2>/dev/null; ./config.sh --url https://github.com/%REPO% --token %TOKEN% --name linux-gpu-docker --labels self-hosted,Linux,X64,gpu,docker --runnergroup Default --work _work --replace"
+echo. >> "%LOGFILE%"
+echo === Registering Linux Runner === >> "%LOGFILE%"
+
+:: Check if Linux runner is set up, if not download it
+echo Checking/downloading Linux runner...
+wsl -d Ubuntu -e bash -c "test -f ~/github-runners/linux/config.sh || (echo 'Downloading Linux runner...' && mkdir -p ~/github-runners/linux && cd ~/github-runners/linux && curl -sL https://github.com/actions/runner/releases/download/v2.321.0/actions-runner-linux-x64-2.321.0.tar.gz | tar xz)" >> "%LOGFILE%" 2>&1
+
+:: Configure the Linux runner
+echo Configuring Linux runner...
+wsl -d Ubuntu -e bash -c "cd ~/github-runners/linux && ./config.sh remove --token %TOKEN% 2>/dev/null; printf 'Y\n\n' | ./config.sh --url https://github.com/%REPO% --token %TOKEN% --name linux-gpu-docker --labels self-hosted,Linux,X64,gpu,docker --runnergroup Default --work _work --replace" >> "%LOGFILE%" 2>&1
 
 echo.
 echo ============================================
-echo   Starting Runners
+echo   Starting Services
 echo ============================================
+echo. >> "%LOGFILE%"
+echo === Starting Services === >> "%LOGFILE%"
 
-echo Starting Windows runner...
-start "Windows GitHub Runner" cmd /c "%USERPROFILE%\github-runners\windows\run.cmd"
+:: Grant NETWORK SERVICE full access to runner directory
+echo Granting NETWORK SERVICE permissions...
+icacls "C:\github-runners" /grant "NETWORK SERVICE:(OI)(CI)F" /T >> "%LOGFILE%" 2>&1
 
-echo Starting Linux runner (WSL2)...
-start "Linux GitHub Runner" wsl -d Ubuntu -e bash -c "cd ~/github-runners/linux && ./run.sh"
+echo Starting Windows runner service...
+echo Starting Windows service... >> "%LOGFILE%"
+powershell -Command "Get-Service -Name 'actions.runner.*' | Stop-Service -Force -ErrorAction SilentlyContinue" >> "%LOGFILE%" 2>&1
+timeout /t 2 >nul
+powershell -Command "Get-Service -Name 'actions.runner.*' | Start-Service" >> "%LOGFILE%" 2>&1
 
 echo.
 echo ============================================
-echo   Both runners are now running!
+echo   Verifying Services
+echo ============================================
+echo. >> "%LOGFILE%"
+echo === Service Status === >> "%LOGFILE%"
+
+echo.
+echo Windows runner service status:
+powershell -Command "Get-Service -Name 'actions.runner.*' | Format-Table -Property Name, Status -AutoSize" | powershell -Command "$input | Tee-Object -FilePath '%LOGFILE%' -Append"
+
+echo.
+echo Linux runner service status:
+wsl -d Ubuntu -e bash -c "cd ~/github-runners/linux && systemctl --user status actions.runner.* 2>/dev/null | head -3 || echo 'Service not yet installed (run manually in WSL)'" | powershell -Command "$input | Tee-Object -FilePath '%LOGFILE%' -Append"
+
+echo.
+echo ============================================
+echo   Runners installed!
 echo ============================================
 echo.
 echo Windows runner: windows-gpu (labels: self-hosted, Windows, X64, gpu)
-echo Linux runner:   linux-gpu-docker (labels: self-hosted, Linux, X64, gpu, docker)
+echo Linux runner: linux-gpu-docker (labels: self-hosted, Linux, X64, gpu, docker)
 echo.
-echo Press any key to exit (runners will keep running)...
-pause >nul
+echo Log saved to: %LOGFILE%
+echo.
+echo === Complete === >> "%LOGFILE%"
+
+pause

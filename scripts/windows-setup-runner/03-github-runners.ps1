@@ -113,7 +113,7 @@ if errorlevel 1 (
 
 echo.
 echo Getting registration token for %REPO%...
-for /f "tokens=*" %%i in ('gh api repos/%REPO%/actions/runners/registration-token --jq .token') do set TOKEN=%%i
+for /f "tokens=*" %%i in ('gh api repos/%REPO%/actions/runners/registration-token -X POST --jq .token') do set TOKEN=%%i
 
 if "%TOKEN%"=="" (
     echo Error: Could not get registration token. Check repo name and permissions.
