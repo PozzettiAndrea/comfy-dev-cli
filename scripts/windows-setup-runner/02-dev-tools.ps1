@@ -1,6 +1,6 @@
 # =============================================================================
 # 02-DEV-TOOLS.PS1
-# Installs Git, Claude Code, Miniconda, uv, GitHub CLI, zstd, tar, Docker, act
+# Installs Git, Claude Code, uv, GitHub CLI, zstd, tar, Docker
 # =============================================================================
 
 $ErrorActionPreference = "Stop"
@@ -33,23 +33,6 @@ if (Get-Command claude -ErrorAction SilentlyContinue) {
     Write-Host "Installing Claude Code..." -ForegroundColor Yellow
     irm https://claude.ai/install.ps1 | iex
     Write-Host "Claude Code installed" -ForegroundColor Green
-}
-
-# ============================================================================
-# MINICONDA
-# Python environment management - keeps system Python clean
-# ============================================================================
-if (Test-Path "$env:USERPROFILE\miniconda3\condabin\conda.bat") {
-    Write-Host "Miniconda already installed" -ForegroundColor DarkGray
-} else {
-    Write-Host "Installing Miniconda..." -ForegroundColor Yellow
-    $url = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"
-    $exe = "$env:TEMP\Miniconda3.exe"
-    Invoke-WebRequest $url -OutFile $exe
-    Start-Process $exe -ArgumentList "/InstallationType=JustMe","/RegisterPython=0","/S","/D=$env:USERPROFILE\miniconda3" -Wait
-    Remove-Item $exe
-    [Environment]::SetEnvironmentVariable("Path", "$env:USERPROFILE\miniconda3\condabin;" + [Environment]::GetEnvironmentVariable("Path","User"), "User")
-    Write-Host "Miniconda installed" -ForegroundColor Green
 }
 
 # ============================================================================
@@ -129,22 +112,6 @@ if ($rscAdapters) {
     Write-Host "RSC disabled" -ForegroundColor Green
 } else {
     Write-Host "RSC already disabled" -ForegroundColor DarkGray
-}
-
-# ============================================================================
-# ACT
-# Run GitHub Actions locally - great for testing CI before pushing
-# ============================================================================
-if (Get-Command act -ErrorAction SilentlyContinue) {
-    Write-Host "act already installed" -ForegroundColor DarkGray
-} else {
-    Write-Host "Installing act..." -ForegroundColor Yellow
-    $zip = "$env:TEMP\act.zip"
-    Invoke-WebRequest "https://github.com/nektos/act/releases/latest/download/act_Windows_x86_64.zip" -OutFile $zip
-    Expand-Archive $zip "$env:ProgramFiles\act" -Force
-    [Environment]::SetEnvironmentVariable("Path", "$env:ProgramFiles\act;" + [Environment]::GetEnvironmentVariable("Path","Machine"), "Machine")
-    Remove-Item $zip
-    Write-Host "act installed" -ForegroundColor Green
 }
 
 Write-Host "Dev tools setup complete" -ForegroundColor Green
