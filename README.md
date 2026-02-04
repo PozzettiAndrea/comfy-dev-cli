@@ -1,18 +1,6 @@
 # comfy-dev-cli
 
-CLI tools for ComfyUI node development.
-
-## Install
-
-```bash
-# Linux
-curl -fsSL https://raw.githubusercontent.com/PozzettiAndrea/comfy-dev-cli/main/scripts/linux_setup.sh | bash
-```
-
-```powershell
-# Windows
-irm https://raw.githubusercontent.com/PozzettiAndrea/comfy-dev-cli/main/scripts/windows_setup.ps1 | iex
-```
+Some CLI tools I have created for ComfyUI node development.
 
 ## Usage
 
