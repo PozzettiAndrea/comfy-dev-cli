@@ -186,6 +186,17 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
         if pkg_path.exists():
             run_logged(["uv", "pip", "install", "-e", str(pkg_path), "--python", str(env_python)])
 
+    # Create constraints file to protect local packages from being overwritten
+    constraints_file = env_path / "constraints.txt"
+    constraints = []
+    for pkg in ["comfy-env", "comfy-test", "comfy-3d-viewers"]:
+        pkg_path = utils_dir / pkg
+        if pkg_path.exists():
+            constraints.append(f"{pkg} @ file://{pkg_path}")
+    if constraints:
+        constraints_file.write_text("\n".join(constraints) + "\n")
+        console.print(f"[dim]Created constraints file: {constraints_file}[/dim]")
+
     # Install custom nodes
     console.print("Installing custom nodes...")
     for node in nodes_to_install:
@@ -215,9 +226,13 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
             run_logged(clone_cmd)
 
         # Install requirements first (provides dependencies for install.py)
+        # Use constraints file to prevent local packages from being overwritten
         node_reqs = target / "requirements.txt"
         if node_reqs.exists():
-            run_logged(["uv", "pip", "install", "-r", str(node_reqs), "--python", str(env_python)], check=False)
+            pip_cmd = ["uv", "pip", "install", "-r", str(node_reqs), "--python", str(env_python)]
+            if constraints_file.exists():
+                pip_cmd.extend(["-c", str(constraints_file)])
+            run_logged(pip_cmd, check=False)
 
         # Run install.py after requirements are installed
         install_script = target / "install.py"
