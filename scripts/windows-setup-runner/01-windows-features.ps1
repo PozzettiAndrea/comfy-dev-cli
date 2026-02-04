@@ -35,15 +35,10 @@ if ($edition -in @("Professional","Enterprise","Education","Server")) {
 # WSL2
 # Required for Docker on Windows Home, useful everywhere
 # ============================================================================
-$wslStatus = wsl --status 2>$null
-if ($wslStatus -match "Default Version: 2") {
-    Write-Host "WSL2 already configured" -ForegroundColor DarkGray
-} else {
-    Write-Host "Configuring WSL2..." -ForegroundColor Yellow
-    wsl --update
-    wsl --set-default-version 2
-    Write-Host "WSL2 configured" -ForegroundColor Green
-}
+Write-Host "Configuring WSL2..." -ForegroundColor Yellow
+wsl --update 2>$null
+wsl --set-default-version 2 2>$null
+Write-Host "WSL2 configured" -ForegroundColor Green
 
 # ============================================================================
 # UBUNTU

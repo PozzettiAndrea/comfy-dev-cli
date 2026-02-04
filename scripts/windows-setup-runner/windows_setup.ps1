@@ -18,6 +18,7 @@ Remove-Item "$setupDir\.reboot-needed" -ErrorAction SilentlyContinue
 
 # Download all scripts
 $scripts = @(
+    "00-file-io-optimizations.ps1",
     "01-windows-features.ps1",
     "02-dev-tools.ps1",
     "03-github-runners.ps1",
@@ -35,8 +36,15 @@ Write-Host "Scripts downloaded to $setupDir" -ForegroundColor Green
 Write-Host ""
 
 # =============================================================================
+# PHASE 0: File I/O Optimizations
+# =============================================================================
+Write-Host "=== Phase 0: File I/O Optimizations ===" -ForegroundColor Cyan
+& "$setupDir\00-file-io-optimizations.ps1"
+
+# =============================================================================
 # PHASE 1: Windows Features (may require reboot)
 # =============================================================================
+Write-Host ""
 Write-Host "=== Phase 1: Windows Features ===" -ForegroundColor Cyan
 & "$setupDir\01-windows-features.ps1"
 

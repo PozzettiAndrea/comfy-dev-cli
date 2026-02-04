@@ -7,17 +7,13 @@ $ErrorActionPreference = "Stop"
 
 # ============================================================================
 # GIT
-# Version control - silent install with sensible defaults
+# Version control - installed via winget
 # ============================================================================
 if (Get-Command git -ErrorAction SilentlyContinue) {
     Write-Host "Git already installed" -ForegroundColor DarkGray
 } else {
     Write-Host "Installing Git..." -ForegroundColor Yellow
-    $gitUrl = "https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.1/Git-2.47.1-64-bit.exe"
-    $gitInstaller = "$env:TEMP\Git-installer.exe"
-    Invoke-WebRequest -Uri $gitUrl -OutFile $gitInstaller
-    Start-Process $gitInstaller -ArgumentList "/VERYSILENT","/NORESTART","/NOCANCEL","/SP-" -Wait
-    Remove-Item $gitInstaller
+    winget install -e --id Git.Git --silent --accept-package-agreements --accept-source-agreements
     # Refresh PATH
     $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [Environment]::GetEnvironmentVariable("Path","User")
     Write-Host "Git installed" -ForegroundColor Green
@@ -70,17 +66,13 @@ if (Get-Command uv -ErrorAction SilentlyContinue) {
 
 # ============================================================================
 # GITHUB CLI
-# Authenticate and manage repos from terminal
+# Authenticate and manage repos from terminal - installed via winget
 # ============================================================================
 if (Get-Command gh -ErrorAction SilentlyContinue) {
     Write-Host "GitHub CLI already installed" -ForegroundColor DarkGray
 } else {
     Write-Host "Installing GitHub CLI..." -ForegroundColor Yellow
-    $url = "https://github.com/cli/cli/releases/download/v2.63.2/gh_2.63.2_windows_amd64.msi"
-    $msi = "$env:TEMP\gh.msi"
-    Invoke-WebRequest $url -OutFile $msi
-    Start-Process "msiexec.exe" -ArgumentList "/i",$msi,"/qn","/norestart" -Wait
-    Remove-Item $msi
+    winget install -e --id GitHub.cli --silent --accept-package-agreements --accept-source-agreements
     Write-Host "GitHub CLI installed" -ForegroundColor Green
 }
 
@@ -115,18 +107,14 @@ if (Get-Command tar -ErrorAction SilentlyContinue) {
 
 # ============================================================================
 # DOCKER DESKTOP
-# Container runtime - uses Hyper-V on Pro+, WSL2 on Home
+# Container runtime - installed via winget
 # ============================================================================
 $dockerExe = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
 if (Test-Path $dockerExe) {
     Write-Host "Docker Desktop already installed" -ForegroundColor DarkGray
 } else {
     Write-Host "Installing Docker Desktop..." -ForegroundColor Yellow
-    $url = "https://desktop.docker.com/win/stable/Docker%20Desktop%20Installer.exe"
-    $exe = "$env:TEMP\DockerDesktopInstaller.exe"
-    Invoke-WebRequest $url -OutFile $exe
-    Start-Process $exe -ArgumentList "install","--quiet","--accept-license" -Wait
-    Remove-Item $exe
+    winget install -e --id Docker.DockerDesktop --silent --accept-package-agreements --accept-source-agreements
     Write-Host "Docker Desktop installed" -ForegroundColor Green
 }
 
