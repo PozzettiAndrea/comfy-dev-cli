@@ -160,8 +160,11 @@ def run_direct(repo_path: Path, platform_name: str = "windows", gpu: bool = Fals
     mode = "GPU" if gpu else "CPU"
     console.print(f"[bold cyan]Running comfy-test directly ({platform_name}, {mode} mode)[/bold cyan]")
 
-    # Set up output directory (~/logs on Linux, ~/Desktop/logs on Windows)
-    if platform.system() == "Windows":
+    # Use COMFY_TEST_LOGS_DIR if set, otherwise default to ~/logs or ~/Desktop/logs
+    logs_dir_env = os.environ.get("COMFY_TEST_LOGS_DIR")
+    if logs_dir_env:
+        logs_dir = Path(logs_dir_env)
+    elif platform.system() == "Windows":
         logs_dir = Path.home() / "Desktop" / "logs"
     else:
         logs_dir = Path.home() / "logs"
@@ -177,14 +180,16 @@ def run_direct(repo_path: Path, platform_name: str = "windows", gpu: bool = Fals
 
     console.print(f"[dim]Output: {output_dir}[/dim]")
 
-    # Set env vars for comfy-test
-    os.environ["COMFY_TEST_LOGS_DIR"] = str(logs_dir)
-    os.environ["COMFY_TEST_WORKSPACE_DIR"] = str(logs_dir.parent / "workspaces")
+    # Set env vars for comfy-test (only if not already set)
+    if "COMFY_TEST_LOGS_DIR" not in os.environ:
+        os.environ["COMFY_TEST_LOGS_DIR"] = str(logs_dir)
+    if "COMFY_TEST_WORKSPACE_DIR" not in os.environ:
+        os.environ["COMFY_TEST_WORKSPACE_DIR"] = str(logs_dir.parent / "workspaces")
     if gpu:
         os.environ["COMFY_TEST_GPU"] = "1"
 
     # Build comfy-test command
-    cmd = ["comfy-test", "run", "--platform", platform_name]
+    cmd = ["comfy-test", "run", "--platform", platform_name, "--branch", branch]
     if gpu:
         cmd.append("--gpu")
     if verbose:

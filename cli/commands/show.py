@@ -62,7 +62,10 @@ def _fix_permissions_if_needed(folder: Path) -> None:
 
 def find_latest_log(repo_name: str, timestamp: str = None) -> Optional[Path]:
     """Find a test run folder for a repo."""
-    if platform.system() == "Windows":
+    logs_dir_env = os.environ.get("COMFY_TEST_LOGS_DIR")
+    if logs_dir_env:
+        logs_dir = Path(logs_dir_env)
+    elif platform.system() == "Windows":
         logs_dir = Path.home() / "Desktop" / "logs"
     else:
         logs_dir = Path.home() / "logs"
@@ -122,7 +125,13 @@ def show_results(repo_name: str, port: int = 8001, regenerate: bool = False, tim
     log_folder = find_latest_log(repo_name, timestamp)
     if log_folder is None:
         console.print(f"[red]No test runs found for '{repo_name}'[/red]")
-        logs_path = "~/Desktop/logs/" if platform.system() == "Windows" else "~/logs/"
+        logs_dir_env = os.environ.get("COMFY_TEST_LOGS_DIR")
+        if logs_dir_env:
+            logs_path = logs_dir_env
+        elif platform.system() == "Windows":
+            logs_path = "~/Desktop/logs/"
+        else:
+            logs_path = "~/logs/"
         console.print(f"[dim]Searched in: {logs_path}[/dim]")
         return 1
 
