@@ -231,7 +231,7 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
         if node_reqs.exists():
             pip_cmd = ["uv", "pip", "install", "-r", str(node_reqs), "--python", str(env_python)]
             if constraints_file.exists():
-                pip_cmd.extend(["-c", str(constraints_file)])
+                pip_cmd.extend(["--overrides", str(constraints_file)])
             run_logged(pip_cmd, check=False)
 
         # Run install.py after requirements are installed
