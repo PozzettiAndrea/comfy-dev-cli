@@ -5,6 +5,11 @@
 
 $ErrorActionPreference = "Stop"
 
+# Helper: refresh PATH from registry (picks up changes from installers)
+function Refresh-Path {
+    $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [Environment]::GetEnvironmentVariable("Path","User")
+}
+
 # ============================================================================
 # CHOCOLATEY
 # Package manager - needed for packages not available via winget
@@ -16,40 +21,47 @@ if (Get-Command choco -ErrorAction SilentlyContinue) {
     Set-ExecutionPolicy Bypass -Scope Process -Force
     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
     Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-    $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [Environment]::GetEnvironmentVariable("Path","User")
+    Refresh-Path
     Write-Host "Chocolatey installed" -ForegroundColor Green
 }
 
 # ============================================================================
 # NVIDIA DISPLAY DRIVER
 # GPU driver - installed via Chocolatey (not available on winget)
+# Non-fatal: may fail on VMs or systems without NVIDIA hardware
 # ============================================================================
 $nvidiaDriver = choco list --local-only nvidia-display-driver 2>$null
 if ($nvidiaDriver -match "nvidia-display-driver") {
     Write-Host "NVIDIA display driver already installed via Chocolatey" -ForegroundColor DarkGray
 } else {
     Write-Host "Installing NVIDIA display driver..." -ForegroundColor Yellow
-    choco install nvidia-display-driver -y
-    Write-Host "NVIDIA display driver installed" -ForegroundColor Green
+    try {
+        choco install nvidia-display-driver -y
+        Write-Host "NVIDIA display driver installed" -ForegroundColor Green
+    } catch {
+        Write-Host "WARNING: NVIDIA display driver installation failed. This is non-fatal." -ForegroundColor Yellow
+        Write-Host "  You may need to install the driver manually if you have NVIDIA hardware." -ForegroundColor Yellow
+    }
 }
 
 # ============================================================================
 # GIT
-# Version control - installed via winget
+# Version control - installed via winget (--source winget skips msstore)
 # ============================================================================
 if (Get-Command git -ErrorAction SilentlyContinue) {
     Write-Host "Git already installed" -ForegroundColor DarkGray
 } else {
     Write-Host "Installing Git..." -ForegroundColor Yellow
-    winget install -e --id Git.Git --silent --accept-package-agreements --accept-source-agreements
-    # Refresh PATH
-    $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [Environment]::GetEnvironmentVariable("Path","User")
+    winget install -e --id Git.Git --source winget --silent --accept-package-agreements --accept-source-agreements
+    Refresh-Path
     Write-Host "Git installed" -ForegroundColor Green
 }
 
-# Git config - sensible defaults
-git config --global core.autocrlf false 2>$null
-git config --global core.longpaths true 2>$null
+# Git config - sensible defaults (only if git is available)
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    git config --global core.autocrlf false 2>$null
+    git config --global core.longpaths true 2>$null
+}
 
 # ============================================================================
 # CLAUDE CODE
@@ -84,7 +96,8 @@ if (Get-Command gh -ErrorAction SilentlyContinue) {
     Write-Host "GitHub CLI already installed" -ForegroundColor DarkGray
 } else {
     Write-Host "Installing GitHub CLI..." -ForegroundColor Yellow
-    winget install -e --id GitHub.cli --silent --accept-package-agreements --accept-source-agreements
+    winget install -e --id GitHub.cli --source winget --silent --accept-package-agreements --accept-source-agreements
+    Refresh-Path
     Write-Host "GitHub CLI installed" -ForegroundColor Green
 }
 
@@ -96,7 +109,8 @@ if (Get-Command zstd -ErrorAction SilentlyContinue) {
     Write-Host "zstd already installed" -ForegroundColor DarkGray
 } else {
     Write-Host "Installing zstd..." -ForegroundColor Yellow
-    winget install -e --id Facebook.zstd --silent --accept-package-agreements --accept-source-agreements
+    winget install -e --id Facebook.zstd --source winget --silent --accept-package-agreements --accept-source-agreements
+    Refresh-Path
     Write-Host "zstd installed" -ForegroundColor Green
 }
 
@@ -108,7 +122,7 @@ if (Test-Path "C:\Program Files\7-Zip\7z.exe") {
     Write-Host "7-Zip already installed" -ForegroundColor DarkGray
 } else {
     Write-Host "Installing 7-Zip..." -ForegroundColor Yellow
-    winget install -e --id 7zip.7zip --silent --accept-package-agreements --accept-source-agreements
+    winget install -e --id 7zip.7zip --source winget --silent --accept-package-agreements --accept-source-agreements
     Write-Host "7-Zip installed" -ForegroundColor Green
 }
 
@@ -132,7 +146,7 @@ if (Test-Path $dockerExe) {
     Write-Host "Docker Desktop already installed" -ForegroundColor DarkGray
 } else {
     Write-Host "Installing Docker Desktop..." -ForegroundColor Yellow
-    winget install -e --id Docker.DockerDesktop --silent --accept-package-agreements --accept-source-agreements
+    winget install -e --id Docker.DockerDesktop --source winget --silent --accept-package-agreements --accept-source-agreements
     Write-Host "Docker Desktop installed" -ForegroundColor Green
 }
 

@@ -32,7 +32,21 @@ if (Test-Path $windowsRunnerExe) {
     $runnerVersion = "2.321.0"
     $runnerUrl = "https://github.com/actions/runner/releases/download/v$runnerVersion/actions-runner-win-x64-$runnerVersion.zip"
     $runnerZip = "$env:TEMP\actions-runner-win.zip"
-    Invoke-WebRequest $runnerUrl -OutFile $runnerZip
+    $maxRetries = 3
+    for ($i = 1; $i -le $maxRetries; $i++) {
+        try {
+            Invoke-WebRequest $runnerUrl -OutFile $runnerZip -UseBasicParsing
+            break
+        } catch {
+            if ($i -eq $maxRetries) {
+                Write-Host "ERROR: Failed to download GitHub Runner after $maxRetries attempts." -ForegroundColor Red
+                Write-Host "  Check your network connection and try again." -ForegroundColor Yellow
+                throw
+            }
+            Write-Host "  Download attempt $i failed, retrying in 5 seconds..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 5
+        }
+    }
     Expand-Archive $runnerZip $windowsRunnerDir -Force
     Remove-Item $runnerZip
     Write-Host "Windows GitHub Runner downloaded" -ForegroundColor Green
@@ -64,7 +78,7 @@ if exist %USERPROFILE%\miniconda3\condabin\conda.bat (
 )
 
 echo Removing leftover containers...
-docker rm -f $(docker ps -aq) 2>nul
+for /f "tokens=*" %%i in ('docker ps -aq 2^>nul') do docker rm -f %%i 2>nul
 docker system prune -f 2>nul
 
 echo Resetting GPU state...
@@ -93,7 +107,7 @@ if ($keepaliveTask) {
     Write-Host "Creating WSL-Keepalive scheduled task..." -ForegroundColor Yellow
     $trigger = New-ScheduledTaskTrigger -AtStartup
     $action = New-ScheduledTaskAction -Execute "wsl.exe" -Argument "-d Ubuntu -- sleep infinity"
-    $principal = New-ScheduledTaskPrincipal -UserId "Administrator" -LogonType S4U -RunLevel Highest
+    $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType S4U -RunLevel Highest
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit 0 -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
     Register-ScheduledTask -TaskName "WSL-Keepalive" -Trigger $trigger -Action $action -Principal $principal -Settings $settings -Force | Out-Null
     Write-Host "WSL-Keepalive task created (runs at startup)" -ForegroundColor Green

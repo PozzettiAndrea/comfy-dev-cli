@@ -56,6 +56,22 @@ Write-Host "=== Phase 2: Dev Tools ===" -ForegroundColor Cyan
 & "$setupDir\02-dev-tools.ps1"
 
 # =============================================================================
+# CLONE COMFY-DEV-CLI TO DESKTOP
+# Now that Git is installed, clone the repo for local access
+# =============================================================================
+Write-Host ""
+$desktopPath = [Environment]::GetFolderPath("Desktop")
+$repoDir = "$desktopPath\comfy-dev-cli"
+if (Test-Path "$repoDir\.git") {
+    Write-Host "comfy-dev-cli already cloned on Desktop" -ForegroundColor DarkGray
+} else {
+    Write-Host "Cloning comfy-dev-cli to Desktop..." -ForegroundColor Yellow
+    if (Test-Path $repoDir) { Remove-Item $repoDir -Recurse -Force }
+    git clone https://github.com/PozzettiAndrea/comfy-dev-cli.git $repoDir
+    Write-Host "comfy-dev-cli cloned to $repoDir" -ForegroundColor Green
+}
+
+# =============================================================================
 # PHASE 3: GitHub Runners
 # =============================================================================
 Write-Host ""
