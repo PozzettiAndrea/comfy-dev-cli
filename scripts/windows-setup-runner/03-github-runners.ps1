@@ -83,6 +83,31 @@ Copy-Item "$SetupDir\04-wsl-setup.sh" "$runnerBaseDir\04-wsl-setup.sh" -Force
 Write-Host "WSL setup script copied to $runnerBaseDir" -ForegroundColor Green
 
 # ============================================================================
+# WSL KEEPALIVE
+# Prevent WSL2 from auto-shutting down when no interactive sessions are open
+# ============================================================================
+$keepaliveTask = Get-ScheduledTask -TaskName "WSL-Keepalive" -ErrorAction SilentlyContinue
+if ($keepaliveTask) {
+    Write-Host "WSL-Keepalive scheduled task already exists" -ForegroundColor DarkGray
+} else {
+    Write-Host "Creating WSL-Keepalive scheduled task..." -ForegroundColor Yellow
+    $trigger = New-ScheduledTaskTrigger -AtStartup
+    $action = New-ScheduledTaskAction -Execute "wsl.exe" -Argument "-d Ubuntu -- sleep infinity"
+    $principal = New-ScheduledTaskPrincipal -UserId "Administrator" -LogonType S4U -RunLevel Highest
+    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit 0 -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+    Register-ScheduledTask -TaskName "WSL-Keepalive" -Trigger $trigger -Action $action -Principal $principal -Settings $settings -Force | Out-Null
+    Write-Host "WSL-Keepalive task created (runs at startup)" -ForegroundColor Green
+}
+
+# Start keepalive now if not already running
+$wslSleep = Get-Process -Name wsl -ErrorAction SilentlyContinue
+if (-not $wslSleep) {
+    Write-Host "Starting WSL keepalive process..." -ForegroundColor Yellow
+    Start-Process -WindowStyle Hidden wsl -ArgumentList "-d","Ubuntu","--","sleep","infinity"
+    Write-Host "WSL keepalive started" -ForegroundColor Green
+}
+
+# ============================================================================
 # REGISTER-RUNNER BATCH SCRIPT
 # Desktop shortcut to register both runners for any repo
 # ============================================================================
@@ -146,21 +171,33 @@ echo ============================================
 echo   Starting Runners
 echo ============================================
 
-echo Starting Windows runner...
-start "Windows GitHub Runner" cmd /c "%USERPROFILE%\github-runners\windows\run.cmd"
+:: Derive service name: replace / with - in repo name
+set "SVC_REPO=%REPO:/=-%"
+set "WIN_SVC=actions.runner.%SVC_REPO%.windows-gpu"
 
-echo Starting Linux runner (WSL2)...
-start "Linux GitHub Runner" wsl -d Ubuntu -e bash -c "cd ~/github-runners/linux && ./run.sh"
+echo Installing Windows runner as a Windows service...
+cd /d %USERPROFILE%\github-runners\windows
+sc.exe stop "%WIN_SVC%" >nul 2>&1
+sc.exe delete "%WIN_SVC%" >nul 2>&1
+sc.exe create "%WIN_SVC%" binPath= "\"%USERPROFILE%\github-runners\windows\bin\RunnerService.exe\"" start= delayed-auto obj= "NT AUTHORITY\NETWORK SERVICE" DisplayName= "GitHub Actions Runner (%SVC_REPO%.windows-gpu)"
+sc.exe start "%WIN_SVC%"
+echo Windows runner service installed and started.
+
+echo.
+echo Installing Linux runner as systemd service...
+wsl -d Ubuntu -e bash -c "cd ~/github-runners/linux && sudo ./svc.sh uninstall 2>/dev/null; sudo ./svc.sh install %USERNAME% && sudo ./svc.sh start"
 
 echo.
 echo ============================================
-echo   Both runners are now running!
+echo   Both runners are now running as services!
 echo ============================================
 echo.
-echo Windows runner: windows-gpu (labels: self-hosted, Windows, X64, gpu)
-echo Linux runner:   linux-gpu-docker (labels: self-hosted, Linux, X64, gpu, docker)
+echo Windows runner: windows-gpu (Windows service: %WIN_SVC%)
+echo Linux runner:   linux-gpu-docker (systemd service in WSL2)
 echo.
-echo Press any key to exit (runners will keep running)...
+echo Both runners will auto-start on reboot.
+echo.
+echo Press any key to exit...
 pause >nul
 '@
 
@@ -176,11 +213,14 @@ $stopScript = @'
 @echo off
 echo Stopping GitHub Runners...
 
-echo Stopping Windows runner...
-taskkill /FI "WINDOWTITLE eq Windows GitHub Runner*" 2>nul
+echo Stopping Windows runner service...
+for /f "tokens=*" %%s in ('powershell -Command "(Get-Service -Name 'actions.runner.*' -ErrorAction SilentlyContinue).Name"') do (
+    echo   Stopping %%s...
+    sc.exe stop "%%s" >nul 2>&1
+)
 
-echo Stopping Linux runner...
-wsl -d Ubuntu -e bash -c "pkill -f 'Runner.Listener' 2>/dev/null"
+echo Stopping Linux runner service...
+wsl -d Ubuntu -e bash -c "cd ~/github-runners/linux && sudo ./svc.sh stop 2>/dev/null"
 
 echo.
 echo Runners stopped.

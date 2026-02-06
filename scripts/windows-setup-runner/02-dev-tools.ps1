@@ -6,6 +6,34 @@
 $ErrorActionPreference = "Stop"
 
 # ============================================================================
+# CHOCOLATEY
+# Package manager - needed for packages not available via winget
+# ============================================================================
+if (Get-Command choco -ErrorAction SilentlyContinue) {
+    Write-Host "Chocolatey already installed" -ForegroundColor DarkGray
+} else {
+    Write-Host "Installing Chocolatey..." -ForegroundColor Yellow
+    Set-ExecutionPolicy Bypass -Scope Process -Force
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+    $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [Environment]::GetEnvironmentVariable("Path","User")
+    Write-Host "Chocolatey installed" -ForegroundColor Green
+}
+
+# ============================================================================
+# NVIDIA DISPLAY DRIVER
+# GPU driver - installed via Chocolatey (not available on winget)
+# ============================================================================
+$nvidiaDriver = choco list --local-only nvidia-display-driver 2>$null
+if ($nvidiaDriver -match "nvidia-display-driver") {
+    Write-Host "NVIDIA display driver already installed via Chocolatey" -ForegroundColor DarkGray
+} else {
+    Write-Host "Installing NVIDIA display driver..." -ForegroundColor Yellow
+    choco install nvidia-display-driver -y
+    Write-Host "NVIDIA display driver installed" -ForegroundColor Green
+}
+
+# ============================================================================
 # GIT
 # Version control - installed via winget
 # ============================================================================

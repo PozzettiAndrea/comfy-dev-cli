@@ -112,6 +112,11 @@ timeout /t 2 >nul
 powershell -Command "Get-Service -Name 'actions.runner.*' | Start-Service" >> "%LOGFILE%" 2>&1
 
 echo.
+echo Installing Linux runner as systemd service...
+echo Installing Linux runner as systemd service... >> "%LOGFILE%"
+wsl -d Ubuntu -e bash -c "cd ~/github-runners/linux && sudo ./svc.sh uninstall 2>/dev/null; sudo ./svc.sh install %USERNAME% && sudo ./svc.sh start" >> "%LOGFILE%" 2>&1
+
+echo.
 echo ============================================
 echo   Verifying Services
 echo ============================================
@@ -124,15 +129,15 @@ powershell -Command "Get-Service -Name 'actions.runner.*' | Format-Table -Proper
 
 echo.
 echo Linux runner service status:
-wsl -d Ubuntu -e bash -c "cd ~/github-runners/linux && systemctl --user status actions.runner.* 2>/dev/null | head -3 || echo 'Service not yet installed (run manually in WSL)'" | powershell -Command "$input | Tee-Object -FilePath '%LOGFILE%' -Append"
+wsl -d Ubuntu -e bash -c "sudo systemctl status actions.runner.*.service 2>/dev/null | head -5 || echo 'Service status unknown'" | powershell -Command "$input | Tee-Object -FilePath '%LOGFILE%' -Append"
 
 echo.
 echo ============================================
-echo   Runners installed!
+echo   Both runners installed as services!
 echo ============================================
 echo.
-echo Windows runner: windows-gpu (labels: self-hosted, Windows, X64, gpu)
-echo Linux runner: linux-gpu-docker (labels: self-hosted, Linux, X64, gpu, docker)
+echo Windows runner: windows-gpu (Windows service, auto-starts on reboot)
+echo Linux runner:   linux-gpu-docker (systemd service in WSL2, auto-starts)
 echo.
 echo Log saved to: %LOGFILE%
 echo.

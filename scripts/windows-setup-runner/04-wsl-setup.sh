@@ -10,10 +10,29 @@ set -e
 echo "=== WSL2 Ubuntu Setup ==="
 
 # ============================================================================
+# PASSWORDLESS SUDO
+# Needed so the runner can install system deps without hanging on a prompt
+# ============================================================================
+if sudo -n true 2>/dev/null; then
+    echo "Passwordless sudo already configured"
+else
+    echo "Configuring passwordless sudo..."
+    echo '%sudo ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/nopasswd > /dev/null
+    sudo chmod 440 /etc/sudoers.d/nopasswd
+    echo "Passwordless sudo configured"
+fi
+
+# ============================================================================
 # SYSTEM UPDATE
 # ============================================================================
 echo "Updating system packages..."
 sudo apt-get update && sudo apt-get upgrade -y
+
+# ============================================================================
+# ESSENTIAL TOOLS
+# ============================================================================
+echo "Installing essential tools..."
+sudo apt-get install -y zstd zip
 
 # ============================================================================
 # DOCKER
