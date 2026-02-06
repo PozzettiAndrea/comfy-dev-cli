@@ -7,6 +7,19 @@ $ErrorActionPreference = "Stop"
 $baseUrl = "https://raw.githubusercontent.com/PozzettiAndrea/comfy-dev-cli/main/scripts/windows-setup-runner"
 $setupDir = "$env:TEMP\comfy-dev-setup"
 
+# =============================================================================
+# LOGGING - Capture all output to setup.log on Desktop
+# =============================================================================
+$desktopPath = [Environment]::GetFolderPath("Desktop")
+$logFile = "$desktopPath\setup.log"
+try {
+    Start-Transcript -Path $logFile -Append
+} catch {
+    Write-Host "WARNING: Could not start transcript logging to $logFile" -ForegroundColor Yellow
+    Write-Host "  Error: $_" -ForegroundColor Yellow
+    Write-Host "  Setup will continue without file logging." -ForegroundColor Yellow
+}
+
 Write-Host "=== Comfy Dev CLI - Windows Setup ===" -ForegroundColor Cyan
 Write-Host "Downloading setup scripts..." -ForegroundColor Yellow
 
@@ -112,3 +125,13 @@ if (Test-Path $rebootFlag) {
     Write-Host "  4. Double-click 'Register-Runner.bat' on Desktop" -ForegroundColor Cyan
     Write-Host ""
 }
+
+# =============================================================================
+# STOP LOGGING
+# =============================================================================
+try {
+    Stop-Transcript
+} catch {
+    # Transcript may not have started successfully
+}
+Write-Host "Setup log saved to: $logFile" -ForegroundColor Cyan
