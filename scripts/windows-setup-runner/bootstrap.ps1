@@ -35,4 +35,4 @@ Write-Host "Scripts downloaded to $setupDir" -ForegroundColor Green
 Write-Host ""
 
 # Launch the main setup script as a file (not piped) for reliable transcript logging
-& "$setupDir\windows_setup.ps1"
+powershell.exe -ExecutionPolicy Bypass -File "$setupDir\windows_setup.ps1"
