@@ -65,7 +65,7 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
 
 # ============================================================================
 # CLONE COMFY-DEV-CLI TO DESKTOP
-# Clone early — before Docker/RSC changes that can disrupt networking
+# Clone early -- before Docker/RSC changes that can disrupt networking
 # ============================================================================
 if (Get-Command git -ErrorAction SilentlyContinue) {
     $desktopPath = [Environment]::GetFolderPath("Desktop")

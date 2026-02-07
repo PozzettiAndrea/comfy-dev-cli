@@ -1,6 +1,6 @@
 # =============================================================================
 # COMFY-DEV-CLI WINDOWS SETUP
-# Launched by bootstrap.ps1 — do not run via irm | iex directly.
+# Launched by bootstrap.ps1 -- do not run via irm | iex directly.
 # One-liner: irm https://raw.githubusercontent.com/PozzettiAndrea/comfy-dev-cli/main/scripts/windows-setup-runner/bootstrap.ps1 | iex
 # =============================================================================
 
@@ -100,7 +100,7 @@ if (Test-PhaseComplete 1) {
 }
 
 # -------------------------------------------------------------------------
-# REBOOT CHECKPOINT — if Phase 1 set the reboot flag, reboot now so that
+# REBOOT CHECKPOINT -- if Phase 1 set the reboot flag, reboot now so that
 # Hyper-V / WSL / Container networking is properly initialized before
 # Phase 2 installs Docker and modifies the network stack.
 # -------------------------------------------------------------------------
@@ -214,7 +214,7 @@ if (Test-PhaseComplete 5) {
     Write-Host ""
     $repo = Read-Host "Enter repo to register runners for (owner/repo)"
     if ([string]::IsNullOrWhiteSpace($repo)) {
-        Write-Host "No repo provided — skipping runner registration." -ForegroundColor Yellow
+        Write-Host "No repo provided -- skipping runner registration." -ForegroundColor Yellow
         Write-Host "You can register later by running Register-Runner.bat on the Desktop." -ForegroundColor Yellow
     } else {
         Write-Host "Getting registration token for $repo..." -ForegroundColor Yellow
@@ -285,13 +285,13 @@ Write-Host "  Setup Complete!" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
 
-# Clean up progress file — setup is fully done
+# Clean up progress file -- setup is fully done
 Remove-Item $progressFile -ErrorAction SilentlyContinue
 Remove-Item "$setupDir\.reboot-needed" -ErrorAction SilentlyContinue
 
 } finally {
     # =============================================================================
-    # STOP LOGGING — always runs, even on error or before reboot
+    # STOP LOGGING -- always runs, even on error or before reboot
     # =============================================================================
     try { Stop-Transcript } catch {}
 }
