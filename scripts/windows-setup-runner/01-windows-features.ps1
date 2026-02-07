@@ -5,7 +5,7 @@
 
 $ErrorActionPreference = "Stop"
 $rebootNeeded = $false
-$setupDir = "$env:TEMP\comfy-dev-setup"
+$setupDir = "$env:USERPROFILE\.comfy-dev-setup"
 
 # ============================================================================
 # HYPER-V + CONTAINERS

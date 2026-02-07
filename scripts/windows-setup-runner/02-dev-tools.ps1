@@ -64,6 +64,23 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
 }
 
 # ============================================================================
+# CLONE COMFY-DEV-CLI TO DESKTOP
+# Clone early — before Docker/RSC changes that can disrupt networking
+# ============================================================================
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    $desktopPath = [Environment]::GetFolderPath("Desktop")
+    $repoDir = "$desktopPath\comfy-dev-cli"
+    if (Test-Path "$repoDir\.git") {
+        Write-Host "comfy-dev-cli already cloned on Desktop" -ForegroundColor DarkGray
+    } else {
+        Write-Host "Cloning comfy-dev-cli to Desktop..." -ForegroundColor Yellow
+        if (Test-Path $repoDir) { Remove-Item $repoDir -Recurse -Force }
+        git clone https://github.com/PozzettiAndrea/comfy-dev-cli.git $repoDir
+        Write-Host "comfy-dev-cli cloned to $repoDir" -ForegroundColor Green
+    }
+}
+
+# ============================================================================
 # CLAUDE CODE
 # AI coding assistant - native installer with auto-updates
 # ============================================================================

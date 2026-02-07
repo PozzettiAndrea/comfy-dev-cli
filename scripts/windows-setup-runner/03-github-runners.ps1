@@ -4,7 +4,7 @@
 # =============================================================================
 
 param(
-    [string]$SetupDir = "$env:TEMP\comfy-dev-setup"
+    [string]$SetupDir = "$env:USERPROFILE\.comfy-dev-setup"
 )
 
 $ErrorActionPreference = "Stop"
