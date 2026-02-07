@@ -265,11 +265,11 @@ if (Test-PhaseComplete 5) {
         # --- Linux runner ---
         Write-Host ""
         Write-Host "Registering Linux runner..." -ForegroundColor Yellow
-        wsl -d Ubuntu -- bash -c "cd ~/github-runners/linux && ./config.sh remove --token $token 2>/dev/null; printf 'Y\n\n' | ./config.sh --url https://github.com/$repo --token $token --name linux-gpu-docker --labels self-hosted,Linux,X64,gpu,docker --runnergroup Default --work _work --replace"
+        wsl -d Ubuntu -- bash -c "cd ~/github-runners/linux `&`& ./config.sh remove --token $token 2>/dev/null; printf 'Y\n\n' | ./config.sh --url https://github.com/$repo --token $token --name linux-gpu-docker --labels self-hosted,Linux,X64,gpu,docker --runnergroup Default --work _work --replace"
         Write-Host "Linux runner configured" -ForegroundColor Green
 
         # Install Linux runner as systemd service
-        wsl -d Ubuntu -- bash -c "cd ~/github-runners/linux && sudo ./svc.sh uninstall 2>/dev/null; sudo ./svc.sh install runner && sudo ./svc.sh start"
+        wsl -d Ubuntu -- bash -c "cd ~/github-runners/linux `&`& sudo ./svc.sh uninstall 2>/dev/null; sudo ./svc.sh install runner `&`& sudo ./svc.sh start"
         Write-Host "Linux runner service started" -ForegroundColor Green
     }
 
