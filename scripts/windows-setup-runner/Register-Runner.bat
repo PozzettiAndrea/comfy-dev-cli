@@ -64,7 +64,8 @@ set "RUNNER_DIR=C:\github-runners\windows"
 if not exist "%RUNNER_DIR%" (
     echo Creating runner directory and downloading...
     mkdir "%RUNNER_DIR%"
-    powershell -Command "Invoke-WebRequest -Uri 'https://github.com/actions/runner/releases/download/v2.321.0/actions-runner-win-x64-2.321.0.zip' -OutFile '%RUNNER_DIR%\runner.zip'; Expand-Archive -Path '%RUNNER_DIR%\runner.zip' -DestinationPath '%RUNNER_DIR%' -Force; Remove-Item '%RUNNER_DIR%\runner.zip'"
+    curl.exe -fSL -o "%RUNNER_DIR%\runner.zip" "https://github.com/actions/runner/releases/download/v2.321.0/actions-runner-win-x64-2.321.0.zip"
+    powershell -Command "Expand-Archive -Path '%RUNNER_DIR%\runner.zip' -DestinationPath '%RUNNER_DIR%' -Force; Remove-Item '%RUNNER_DIR%\runner.zip'"
 )
 cd /d %RUNNER_DIR%
 

@@ -29,7 +29,7 @@ $scripts = @(
 Write-Host "=== Comfy Dev CLI - Downloading Setup Scripts ===" -ForegroundColor Cyan
 foreach ($script in $scripts) {
     Write-Host "  Downloading $script..." -ForegroundColor DarkGray
-    Invoke-WebRequest -Uri "$baseUrl/$script" -OutFile "$setupDir\$script" -UseBasicParsing
+    curl.exe -fSL -o "$setupDir\$script" "$baseUrl/$script"
 }
 Write-Host "Scripts downloaded to $setupDir" -ForegroundColor Green
 Write-Host ""

@@ -35,7 +35,9 @@ if (Test-Path $windowsRunnerExe) {
     $maxRetries = 3
     for ($i = 1; $i -le $maxRetries; $i++) {
         try {
-            Invoke-WebRequest $runnerUrl -OutFile $runnerZip -UseBasicParsing
+            # curl.exe is much faster than Invoke-WebRequest for large downloads
+            $curlExit = (Start-Process -FilePath "curl.exe" -ArgumentList "-fSL", "-o", $runnerZip, $runnerUrl -NoNewWindow -Wait -PassThru).ExitCode
+            if ($curlExit -ne 0) { throw "curl.exe exited with code $curlExit" }
             break
         } catch {
             if ($i -eq $maxRetries) {
