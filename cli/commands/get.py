@@ -181,7 +181,7 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
     # Install local dev packages EARLY (so install.py uses local version with fixes)
     console.print("Installing local dev packages (editable)...")
     utils_dir = UTILS_REPOS_DIR
-    for pkg in ["comfy-env", "comfy-test", "comfy-3d-viewers"]:
+    for pkg in ["comfy-env", "comfy-test", "comfy-3d-viewers", "comfy-attn"]:
         pkg_path = utils_dir / pkg
         if pkg_path.exists():
             run_logged(["uv", "pip", "install", "-e", str(pkg_path), "--python", str(env_python)])
@@ -189,7 +189,7 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
     # Create constraints file to protect local packages from being overwritten
     constraints_file = env_path / "constraints.txt"
     constraints = []
-    for pkg in ["comfy-env", "comfy-test", "comfy-3d-viewers"]:
+    for pkg in ["comfy-env", "comfy-test", "comfy-3d-viewers", "comfy-attn"]:
         pkg_path = utils_dir / pkg
         if pkg_path.exists():
             constraints.append(f"{pkg} @ file://{pkg_path}")
@@ -248,7 +248,7 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
                 isolated_pip = env_dir / "Scripts" / "pip.exe"  # Windows
             if isolated_pip.exists():
                 console.print(f"  Installing in isolated env: [cyan]{env_dir.name}[/cyan]")
-                for pkg in ["comfy-env", "comfy-test", "comfy-3d-viewers"]:
+                for pkg in ["comfy-env", "comfy-test", "comfy-3d-viewers", "comfy-attn"]:
                     pkg_path = utils_dir / pkg
                     if pkg_path.exists():
                         run_logged([str(isolated_pip), "install", "-e", str(pkg_path)], check=False)
@@ -256,7 +256,7 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
     # Install local dev packages LAST (to override any versions from custom node requirements)
     console.print("Installing local dev packages (editable)...")
     utils_dir = UTILS_REPOS_DIR
-    for pkg in ["comfy-env", "comfy-test", "comfy-3d-viewers"]:
+    for pkg in ["comfy-env", "comfy-test", "comfy-3d-viewers", "comfy-attn"]:
         pkg_path = utils_dir / pkg
         if pkg_path.exists():
             run_logged(["uv", "pip", "install", "-e", str(pkg_path), "--python", str(env_python)])
