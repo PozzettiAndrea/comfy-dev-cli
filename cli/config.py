@@ -150,6 +150,33 @@ def get_all_repos() -> list[Repo]:
     ]
 
 
+def get_repo_config_map() -> dict[str, tuple[str, str]]:
+    """Map repo name -> (config_name, folder_name) by scanning setup configs.
+
+    Parses each *.yml in config/setup/ and extracts repo names from
+    nodes_to_install URLs. Returns e.g.:
+        {"ComfyUI-SAM3": ("sam3", "sam3"), "ComfyUI-HY-WorldPlay": ("world", "world")}
+    """
+    setup_dir = Path(__file__).parent.parent / "config" / "setup"
+    mapping = {}
+    for config_file in setup_dir.glob("*.yml"):
+        with open(config_file) as f:
+            config = yaml.safe_load(f)
+        if not config:
+            continue
+        config_name = config_file.stem
+        folder_name = config.get("folder_name", config_name)
+        for node in config.get("nodes_to_install", []):
+            if isinstance(node, dict):
+                url = node.get("url", "")
+            else:
+                url = node
+            if url:
+                repo_name = url.rstrip("/").split("/")[-1].replace(".git", "")
+                mapping[repo_name] = (config_name, folder_name)
+    return mapping
+
+
 def get_repos_by_category(category: str) -> list[Repo]:
     """Get repos filtered by category from CSV."""
     csv_repos = load_repos_from_csv()
