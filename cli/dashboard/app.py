@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from config import get_all_repos, refresh_repo_data, refresh_repo_stats, get_repo_stats
+from config import get_all_repos, refresh_repo_data, refresh_repo_stats, get_repo_stats, GITHUB_OWNER
 
 app = FastAPI(title="repo-tools Dashboard")
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
@@ -373,6 +373,41 @@ async def update_issue_status(repo_name: str, issue_number: int, request: Reques
         json.dump(data, f, indent=2)
 
     return RedirectResponse(url=f"/issue-analysis/{repo_name}/{issue_number}", status_code=303)
+
+
+@app.get("/pages", response_class=HTMLResponse)
+async def pages_overview(request: Request):
+    """List all GitHub Pages sites."""
+    import os
+    from commands.pages import get_all_pages
+
+    token = os.environ.get("GITHUB_TOKEN", "")
+    repos = get_all_repos()
+    pages_sites = get_all_pages(token, repos)
+
+    return templates.TemplateResponse("pages.html", {
+        "request": request,
+        "pages_sites": pages_sites,
+        "total_repos": len(repos),
+        "github_owner": GITHUB_OWNER,
+    })
+
+
+@app.get("/pages/browse", response_class=HTMLResponse)
+async def pages_browse(request: Request):
+    """Browse GitHub Pages sites in an iframe viewer."""
+    import os
+    from commands.pages import get_all_pages
+
+    token = os.environ.get("GITHUB_TOKEN", "")
+    repos = get_all_repos()
+    pages_sites = get_all_pages(token, repos)
+
+    return templates.TemplateResponse("pages_browse.html", {
+        "request": request,
+        "pages_sites": pages_sites,
+        "github_owner": GITHUB_OWNER,
+    })
 
 
 def run_dashboard(port: int = 8000):

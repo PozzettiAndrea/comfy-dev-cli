@@ -335,6 +335,16 @@ def monitor_download_all_issues(
     dl_all(include_closed)
 
 
+@monitor_app.command("pages")
+def monitor_pages(
+    port: int = typer.Argument(8001, help="Port to serve the pages browser on"),
+):
+    """Browse all GitHub Pages sites in a local dashboard."""
+    require_github_token()
+    from commands.pages import serve_pages
+    raise SystemExit(serve_pages(port))
+
+
 @monitor_app.command("analyze-issues")
 def monitor_analyze_issues(
     repo_name: str = typer.Option(None, "--repo", "-r", help="Analyze specific repo only"),
