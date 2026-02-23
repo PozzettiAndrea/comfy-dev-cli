@@ -81,6 +81,76 @@ def _parse_robocopy_output(raw: str) -> list[tuple[str, int]]:
     return results
 
 
+def _parse_ce_envs(raw: str, platform: str) -> list[tuple[str, str, float]]:
+    """Parse CE env details into (node_name, human_size, sort_bytes) triples.
+
+    For Windows: blocks of ====hash, node_name JSON, robocopy Bytes line.
+    For WSL: blocks of ====hash, du -sh output, optional node_name grep.
+    """
+    results = []
+    current_hash = None
+    current_name = None
+    current_size = None
+    current_bytes = 0.0
+
+    for line in raw.strip().split("\n"):
+        line = line.strip()
+        if line.startswith("===="):
+            # Save previous entry
+            if current_hash and current_size:
+                results.append((current_name or current_hash, current_size, current_bytes))
+            current_hash = line[4:].strip()
+            current_name = None
+            current_size = None
+            current_bytes = 0.0
+        elif '"node_name"' in line:
+            # Extract node name: "node_name": "ComfyUI-TRELLIS2/nodes"
+            try:
+                val = line.split('"node_name"')[1].split('"')[1]
+                # Shorten: ComfyUI-TRELLIS2/nodes -> TRELLIS2/nodes
+                val = val.replace("ComfyUI-", "").replace("\\", "/")
+                # Collapse double slashes from JSON-escaped backslash
+                while "//" in val:
+                    val = val.replace("//", "/")
+                current_name = val
+            except (IndexError, ValueError):
+                pass
+        elif platform == "win" and "Bytes" in line and ":" in line:
+            parts = line.split(":")
+            if len(parts) >= 2:
+                nums = parts[1].strip().split()
+                if nums:
+                    try:
+                        b = int(nums[0])
+                        current_bytes = b
+                        current_size = f"{b / (1024**3):.1f}GB"
+                    except ValueError:
+                        pass
+        elif platform == "wsl" and current_hash and not current_size:
+            # du -sh output line like: 8.7G\t/path/to/env
+            parts = line.split(None, 1)
+            if len(parts) >= 1 and any(c.isdigit() for c in parts[0]):
+                current_size = parts[0]
+                # Parse size for sorting
+                sz_str = parts[0].rstrip("GgMmKkTtBb")
+                try:
+                    val = float(sz_str)
+                    if "G" in parts[0].upper():
+                        current_bytes = val * 1024**3
+                    elif "M" in parts[0].upper():
+                        current_bytes = val * 1024**2
+                    elif "K" in parts[0].upper():
+                        current_bytes = val * 1024
+                except ValueError:
+                    pass
+
+    # Don't forget last entry
+    if current_hash and current_size:
+        results.append((current_name or current_hash, current_size, current_bytes))
+
+    return results
+
+
 def _get_roadrunner_creds() -> tuple[str, str, str]:
     """Get ROADRUNNER SSH credentials from environment."""
     import os
@@ -329,7 +399,8 @@ def monitor_runners():
         console.print("[dim]No active or queued jobs[/dim]")
 
     # --- System info from ROADRUNNER ---
-    console.print("\n[bold blue]Checking ROADRUNNER...[/bold blue]")
+    host, _, _ = _get_roadrunner_creds()
+    console.print(f"\n[bold blue]Checking ROADRUNNER[/bold blue] [dim]({host})[/dim][bold blue]...[/bold blue]")
 
     # Define all SSH queries with labels for progress tracking
     queries = {
@@ -362,7 +433,7 @@ def monitor_runners():
             ' /home/administrator/.cache/uv'
             ' /home/administrator/.cache/pip'
             ' 2>/dev/null; true"',
-            30,
+            90,
         ), {}),
         "caches_win": ("Win caches", _ssh_cmd, (
             'cmd /c "for %d in ('
@@ -373,10 +444,9 @@ def monitor_runners():
             "C:\\Users\\Administrator\\AppData\\Local\\pip"
             ') do @if exist %d ('
             'echo ====%d '
-            "& robocopy %d %d\\..\\__fake /L /S /NJH /NFL /NDL /BYTES /R:0 /W:0 2>nul "
-            '| findstr /C:"Bytes"'
+            "& robocopy %d %d\\..\\__fake /L /S /NJH /NFL /NDL /BYTES /R:0 /W:0 2>nul"
             ')"',
-            30,
+            120,
         ), {}),
         "xwayland": ("Xwayland", _ssh_cmd, (
             'wsl -- bash -c "pgrep Xwayland >/dev/null 2>&1 && echo RUNNING || echo NOT_RUNNING"',
@@ -384,15 +454,26 @@ def monitor_runners():
         ), {}),
         "runners_wsl": ("WSL runner folders", _ssh_cmd, (
             'wsl -- bash -c "du -sh /home/administrator/github-runners/PozzettiAndrea-*/_work 2>/dev/null; true"',
-            60,
+            90,
         ), {}),
         "runners_win": ("Win runner folders", _ssh_cmd, (
             'cmd /c "for /d %d in (C:\\github-runners\\PozzettiAndrea-*) do @if exist %d\\_work ('
             'echo ====%d '
-            "& robocopy %d\\_work %d\\_work\\..\\__fake /L /S /NJH /NFL /NDL /BYTES /R:0 /W:0 2>nul "
-            '| findstr /C:"Bytes"'
+            "& robocopy %d\\_work %d\\_work\\..\\__fake /L /S /NJH /NFL /NDL /BYTES /R:0 /W:0 2>nul"
             ')"',
-            60,
+            120,
+        ), {}),
+        "ce_envs_win": ("Win CE envs", _ssh_cmd, (
+            'cmd /c "for /d %d in (C:\\ce\\_env_*) do @('
+            'echo ====%~nxd '
+            '& type %d\\.comfy-env-meta.json 2>nul '
+            '& robocopy %d %d\\..\\__fake /L /S /NJH /NFL /NDL /BYTES /R:0 /W:0 2>nul'
+            ')"',
+            120,
+        ), {}),
+        "ce_envs_wsl": ("WSL CE envs", _ssh_cmd, (
+            r'wsl -- bash -c "for d in /home/administrator/.ce/_env_*/; do echo ====\$(basename \$d); du -sh \$d 2>/dev/null; grep node_name \$d/.comfy-env-meta.json 2>/dev/null; done"',
+            90,
         ), {}),
     }
 
@@ -424,6 +505,8 @@ def monitor_runners():
     xwayland = results["xwayland"]
     runners_win = results["runners_win"]
     runners_wsl = results["runners_wsl"]
+    ce_envs_win = results["ce_envs_win"]
+    ce_envs_wsl = results["ce_envs_wsl"]
 
     # Disk panel
     disk_lines = []
@@ -456,7 +539,17 @@ def monitor_runners():
             if sz_gb > 0:
                 name = path.rstrip("\\").split("\\")[-1]
                 color = "red" if sz_gb >= 10 else "yellow" if sz_gb >= 2 else "dim"
-                cache_lines.append(f"  [dim]Win:[/dim]  [{color}]{sz_gb}GB[/{color}]  {name} [dim]({path})[/dim]")
+                # For CE, show env breakdown instead of just total
+                if name == "ce" or name == ".ce":
+                    win_envs = _parse_ce_envs(ce_envs_win, "win") if "ERROR" not in ce_envs_win and ce_envs_win.strip() else []
+                    if win_envs:
+                        cache_lines.append(f"  [dim]Win:[/dim]  [{color}]{sz_gb}GB[/{color}]  CE ({len(win_envs)} envs)")
+                        for env_name, env_size, _ in sorted(win_envs, key=lambda x: x[2], reverse=True):
+                            cache_lines.append(f"         [dim]{env_size:>7}  {env_name}[/dim]")
+                    else:
+                        cache_lines.append(f"  [dim]Win:[/dim]  [{color}]{sz_gb}GB[/{color}]  CE [dim]({path})[/dim]")
+                else:
+                    cache_lines.append(f"  [dim]Win:[/dim]  [{color}]{sz_gb}GB[/{color}]  {name} [dim]({path})[/dim]")
     if "ERROR" not in caches_wsl and caches_wsl.strip():
         for line in caches_wsl.strip().split("\n"):
             if not line.strip():
@@ -472,11 +565,29 @@ def monitor_runners():
                     color = "red" if (is_gb and sz_val >= 10) else "yellow" if (is_gb and sz_val >= 2) else "dim"
                 except ValueError:
                     color = "dim"
-                cache_lines.append(f"  [dim]WSL:[/dim]  [{color}]{size}[/{color}]  {name} [dim]({path})[/dim]")
+                # For CE, show env breakdown instead of just total
+                if name == ".ce" or name == "ce":
+                    wsl_envs = _parse_ce_envs(ce_envs_wsl, "wsl") if "ERROR" not in ce_envs_wsl and ce_envs_wsl.strip() else []
+                    if wsl_envs:
+                        cache_lines.append(f"  [dim]WSL:[/dim]  [{color}]{size}[/{color}]  CE ({len(wsl_envs)} envs)")
+                        for env_name, env_size, _ in sorted(wsl_envs, key=lambda x: x[2], reverse=True):
+                            cache_lines.append(f"         [dim]{env_size:>7}  {env_name}[/dim]")
+                    else:
+                        cache_lines.append(f"  [dim]WSL:[/dim]  [{color}]{size}[/{color}]  CE [dim]({path})[/dim]")
+                else:
+                    cache_lines.append(f"  [dim]WSL:[/dim]  [{color}]{size}[/{color}]  {name} [dim]({path})[/dim]")
     if cache_lines:
         console.print(Panel("\n".join(cache_lines), title="Caches", border_style="yellow"))
     else:
-        console.print(Panel("[dim]no caches found[/dim]", title="Caches", border_style="yellow"))
+        errs = []
+        if "ERROR" in caches_win:
+            errs.append(f"Win: {caches_win}")
+        if "ERROR" in caches_wsl:
+            errs.append(f"WSL: {caches_wsl}")
+        if errs:
+            console.print(Panel("[red]timed out[/red]\n" + "\n".join(f"[dim]{e}[/dim]" for e in errs), title="Caches", border_style="yellow"))
+        else:
+            console.print(Panel("[dim]no caches found[/dim]", title="Caches", border_style="yellow"))
 
     # Runner _work folders panel
     runner_lines = []
