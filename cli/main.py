@@ -293,6 +293,13 @@ def monitor_repos():
     console.print(table)
 
 
+@monitor_app.command("runners")
+def monitor_runners():
+    """Show self-hosted runner status, active jobs, disk space, and GPU locks."""
+    from commands.runners import monitor_runners as run_monitor
+    run_monitor()
+
+
 @monitor_app.command("dashboard")
 def monitor_dashboard(
     port: int = typer.Option(8000, "--port", "-p", help="Port to run dashboard on"),

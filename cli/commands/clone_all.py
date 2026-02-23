@@ -55,12 +55,12 @@ def clone_all_repos(pull_existing: bool = False, threshold: int = 0):
             env_dir = INSTALL_DIR / folder_name
             target_path = env_dir / "ComfyUI" / "custom_nodes" / repo.name
 
-            # 2. Ensure setup environment exists
-            if not env_dir.exists():
+            # 2. If the target repo folder doesn't exist, run setup
+            if not target_path.exists():
                 progress.update(task, description=f"[cyan]Setting up {folder_name} environment...[/cyan]")
                 saved_cwd = os.getcwd()
                 try:
-                    setup_comfyui(config_name)
+                    setup_comfyui(config_name, reinstall=True)
                     setup_count += 1
                 except Exception as e:
                     failed += 1
@@ -70,7 +70,7 @@ def clone_all_repos(pull_existing: bool = False, threshold: int = 0):
                 finally:
                     os.chdir(saved_cwd)
 
-            # 3. Verify target path exists
+            # 3. Verify target path exists after setup
             if not target_path.exists():
                 failed += 1
                 progress.update(task, description=f"[red]{repo.name}: target not found at {target_path}[/red]")
