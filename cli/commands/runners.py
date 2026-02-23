@@ -59,6 +59,28 @@ STAGE_MAP = {
 }
 
 
+def _parse_robocopy_output(raw: str) -> list[tuple[str, int]]:
+    """Parse robocopy ====path + Bytes output into (path, size_bytes) pairs."""
+    results = []
+    current_path = None
+    for line in raw.strip().split("\n"):
+        line = line.strip()
+        if line.startswith("===="):
+            current_path = line[4:].strip()
+        elif "Bytes" in line and ":" in line and current_path:
+            # Line like: Bytes : 9725365928 9725365928 0 0 0 0
+            parts = line.split(":")
+            if len(parts) >= 2:
+                nums = parts[1].strip().split()
+                if nums:
+                    try:
+                        results.append((current_path, int(nums[0])))
+                    except ValueError:
+                        pass
+            current_path = None
+    return results
+
+
 def _get_roadrunner_creds() -> tuple[str, str, str]:
     """Get ROADRUNNER SSH credentials from environment."""
     import os
@@ -309,53 +331,99 @@ def monitor_runners():
     # --- System info from ROADRUNNER ---
     console.print("\n[bold blue]Checking ROADRUNNER...[/bold blue]")
 
-    # Parallel SSH commands
-    with ThreadPoolExecutor(max_workers=6) as executor:
-        f_win_disk = executor.submit(
-            _ssh_cmd,
-            'powershell -command "Get-PSDrive C | ForEach-Object { Write-Host ([math]::Round($_.Used/1GB,1)) ([math]::Round($_.Free/1GB,1)) }"'
-        )
-        f_locks = executor.submit(
-            _ssh_cmd,
+    # Define all SSH queries with labels for progress tracking
+    queries = {
+        "win_disk": ("Win disk", _ssh_cmd, (
+            'powershell -command "Get-PSDrive C | ForEach-Object { Write-Host ([math]::Round($_.Used/1GB,1)) ([math]::Round($_.Free/1GB,1)) }"',
+        ), {}),
+        "locks": ("Locks", _ssh_cmd, (
             'cmd /c "if exist C:\\gpu-lock (type C:\\gpu-lock\\owner 2>nul || echo locked-no-owner) else (echo free)" & '
             'cmd /c "if exist C:\\windows-gpu-lock (echo locked) else (echo free)" & '
             'cmd /c "if exist C:\\windows-portable-gpu-lock (echo locked) else (echo free)" & '
-            'cmd /c "if exist C:\\linux-gpu-lock (echo locked) else (echo free)"'
-        )
-        f_nvidia = executor.submit(
-            _ssh_cmd,
+            'cmd /c "if exist C:\\linux-gpu-lock (echo locked) else (echo free)"',
+        ), {}),
+        "nvidia": ("GPU info", _ssh_cmd, (
             'nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits',
             15,
-        )
-        f_wsl_disk = executor.submit(
-            _ssh_cmd,
+        ), {}),
+        "gpu_procs": ("GPU processes", _ssh_cmd, (
+            'nvidia-smi --query-compute-apps=pid,used_gpu_memory,process_name --format=csv,noheader,nounits',
+            15,
+        ), {}),
+        "wsl_disk": ("WSL disk", _ssh_cmd, (
             'wsl -e df -h / --output=size,used,avail,pcent 2>nul',
             15,
-        )
-        f_rattler_win = executor.submit(
-            _ssh_cmd,
-            'powershell -command "'
-            '$paths = @(\"$env:USERPROFILE\\.rattler\", \"$env:LOCALAPPDATA\\rattler\", \"C:\\Users\\Administrator\\.rattler\"); '
-            'foreach ($p in $paths) { if (Test-Path $p) { $sz = (Get-ChildItem $p -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum; '
-            'Write-Host ([math]::Round($sz/1GB,2)) $p; break } }; '
-            '$ce = \"C:\\ce\"; if (Test-Path $ce) { $sz = (Get-ChildItem $ce -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum; '
-            'Write-Host ([math]::Round($sz/1GB,2)) $ce }'
-            '"',
+        ), {}),
+        "caches_wsl": ("WSL caches", _ssh_cmd, (
+            'wsl -- bash -c "du -sh'
+            ' /home/administrator/.ce'
+            ' /home/administrator/.rattler'
+            ' /home/administrator/.cache/rattler'
+            ' /home/administrator/.cache/uv'
+            ' /home/administrator/.cache/pip'
+            ' 2>/dev/null; true"',
             30,
-        )
-        f_rattler_wsl = executor.submit(
-            _ssh_cmd,
-            'wsl -e bash -c "du -sh /home/administrator/.rattler 2>/dev/null; du -sh /home/administrator/.cache/rattler 2>/dev/null; du -sh /home/administrator/.ce 2>/dev/null"',
-            15,
-        )
+        ), {}),
+        "caches_win": ("Win caches", _ssh_cmd, (
+            'cmd /c "for %d in ('
+            "C:\\ce "
+            "C:\\Users\\Administrator\\.rattler "
+            "C:\\Users\\Administrator\\AppData\\Local\\rattler "
+            "C:\\Users\\Administrator\\AppData\\Local\\uv "
+            "C:\\Users\\Administrator\\AppData\\Local\\pip"
+            ') do @if exist %d ('
+            'echo ====%d '
+            "& robocopy %d %d\\..\\__fake /L /S /NJH /NFL /NDL /BYTES /R:0 /W:0 2>nul "
+            '| findstr /C:"Bytes"'
+            ')"',
+            30,
+        ), {}),
+        "xwayland": ("Xwayland", _ssh_cmd, (
+            'wsl -- bash -c "pgrep Xwayland >/dev/null 2>&1 && echo RUNNING || echo NOT_RUNNING"',
+            10,
+        ), {}),
+        "runners_wsl": ("WSL runner folders", _ssh_cmd, (
+            'wsl -- bash -c "du -sh /home/administrator/github-runners/PozzettiAndrea-*/_work 2>/dev/null; true"',
+            60,
+        ), {}),
+        "runners_win": ("Win runner folders", _ssh_cmd, (
+            'cmd /c "for /d %d in (C:\\github-runners\\PozzettiAndrea-*) do @if exist %d\\_work ('
+            'echo ====%d '
+            "& robocopy %d\\_work %d\\_work\\..\\__fake /L /S /NJH /NFL /NDL /BYTES /R:0 /W:0 2>nul "
+            '| findstr /C:"Bytes"'
+            ')"',
+            60,
+        ), {}),
+    }
 
-    # Parse results
-    win_disk = f_win_disk.result()
-    locks_raw = f_locks.result()
-    nvidia = f_nvidia.result()
-    wsl_disk = f_wsl_disk.result()
-    rattler_win = f_rattler_win.result()
-    rattler_wsl = f_rattler_wsl.result()
+    # Launch all SSH commands in parallel with live progress
+    results = {}
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        future_to_key = {}
+        for key, (label, func, args, kwargs) in queries.items():
+            future = executor.submit(func, *args, **kwargs)
+            future_to_key[future] = key
+
+        pending = {k: v[0] for k, v in queries.items()}  # key -> label
+        with console.status("") as status:
+            for future in as_completed(future_to_key):
+                key = future_to_key[future]
+                results[key] = future.result()
+                del pending[key]
+                if pending:
+                    waiting = ", ".join(pending.values())
+                    status.update(f"[dim]waiting:[/dim] {waiting}")
+
+    win_disk = results["win_disk"]
+    locks_raw = results["locks"]
+    nvidia = results["nvidia"]
+    gpu_procs = results["gpu_procs"]
+    wsl_disk = results["wsl_disk"]
+    caches_win = results["caches_win"]
+    caches_wsl = results["caches_wsl"]
+    xwayland = results["xwayland"]
+    runners_win = results["runners_win"]
+    runners_wsl = results["runners_wsl"]
 
     # Disk panel
     disk_lines = []
@@ -377,23 +445,69 @@ def monitor_runners():
     else:
         disk_lines.append(f"[dim]WSL: unavailable[/dim]")
 
-    # Caches (rattler, CE)
+    console.print(Panel("\n".join(disk_lines), title="Disk", border_style="blue"))
+
+    # Caches panel
     cache_lines = []
-    if "ERROR" not in rattler_win and rattler_win.strip():
-        for line in rattler_win.strip().split("\n"):
-            parts = line.split(None, 1)
+    # Parse robocopy output: ====path\n   Bytes : 123456 ...
+    if "ERROR" not in caches_win and caches_win.strip():
+        for path, size_bytes in _parse_robocopy_output(caches_win):
+            sz_gb = round(size_bytes / (1024**3), 1)
+            if sz_gb > 0:
+                name = path.rstrip("\\").split("\\")[-1]
+                color = "red" if sz_gb >= 10 else "yellow" if sz_gb >= 2 else "dim"
+                cache_lines.append(f"  [dim]Win:[/dim]  [{color}]{sz_gb}GB[/{color}]  {name} [dim]({path})[/dim]")
+    if "ERROR" not in caches_wsl and caches_wsl.strip():
+        for line in caches_wsl.strip().split("\n"):
+            if not line.strip():
+                continue
+            parts = line.strip().split(None, 1)
             if len(parts) == 2:
                 size, path = parts
-                cache_lines.append(f"  [dim]Win:[/dim]  {path} — {size} GB")
-    if "ERROR" not in rattler_wsl and rattler_wsl.strip():
-        for line in rattler_wsl.strip().split("\n"):
-            if line.strip():
-                cache_lines.append(f"  [dim]WSL:[/dim]  {line.strip()}")
+                name = path.rstrip("/").split("/")[-1]
+                sz_str = size.rstrip("GgMmKkTt")
+                try:
+                    sz_val = float(sz_str)
+                    is_gb = "G" in size.upper()
+                    color = "red" if (is_gb and sz_val >= 10) else "yellow" if (is_gb and sz_val >= 2) else "dim"
+                except ValueError:
+                    color = "dim"
+                cache_lines.append(f"  [dim]WSL:[/dim]  [{color}]{size}[/{color}]  {name} [dim]({path})[/dim]")
     if cache_lines:
-        disk_lines.append("[bold]Caches:[/bold]")
-        disk_lines.extend(cache_lines)
+        console.print(Panel("\n".join(cache_lines), title="Caches", border_style="yellow"))
+    else:
+        console.print(Panel("[dim]no caches found[/dim]", title="Caches", border_style="yellow"))
 
-    console.print(Panel("\n".join(disk_lines), title="Disk", border_style="blue"))
+    # Runner _work folders panel
+    runner_lines = []
+    # Parse robocopy output for Win runners
+    if "ERROR" not in runners_win and runners_win.strip():
+        for path, size_bytes in _parse_robocopy_output(runners_win):
+            sz_gb = round(size_bytes / (1024**3), 1)
+            name = path.rstrip("\\").split("\\")[-1].replace("PozzettiAndrea-", "")
+            color = "red" if sz_gb >= 5 else "yellow" if sz_gb >= 1 else "dim"
+            runner_lines.append(f"  [dim]Win:[/dim]  [{color}]{sz_gb}GB[/{color}]  {name}")
+    if "ERROR" not in runners_wsl and runners_wsl.strip():
+        for line in runners_wsl.strip().split("\n"):
+            if not line.strip():
+                continue
+            parts = line.strip().split(None, 1)
+            if len(parts) == 2:
+                size, path = parts
+                # Extract runner name from path like .../PozzettiAndrea-ComfyUI-FOO/_work
+                name = path.rstrip("/").replace("/_work", "").split("/")[-1].replace("PozzettiAndrea-", "")
+                sz_str = size.rstrip("GgMmKkTt")
+                try:
+                    sz_val = float(sz_str)
+                    is_gb = "G" in size.upper()
+                    color = "red" if (is_gb and sz_val >= 5) else "yellow" if (is_gb and sz_val >= 1) else "dim"
+                except ValueError:
+                    color = "dim"
+                runner_lines.append(f"  [dim]WSL:[/dim]  [{color}]{size}[/{color}]  {name}")
+    if runner_lines:
+        console.print(Panel("\n".join(runner_lines), title="Runner _work Folders", border_style="cyan"))
+    else:
+        console.print(Panel("[dim]all empty[/dim]", title="Runner _work Folders", border_style="cyan"))
 
     # GPU panel
     gpu_lines = []
@@ -405,7 +519,33 @@ def monitor_runners():
             gpu_lines.append(f"Utilization: [{color}]{gpu_util}%[/{color}]  VRAM: {mem_used}/{mem_total} MiB")
     else:
         gpu_lines.append(f"[dim]{nvidia}[/dim]")
+    # GPU compute processes (filter out [N/A] entries which are display processes)
+    if "ERROR" not in gpu_procs and gpu_procs.strip():
+        compute_procs = []
+        for line in gpu_procs.strip().split("\n"):
+            if "[N/A]" in line or not line.strip():
+                continue
+            parts = [p.strip() for p in line.split(",")]
+            if len(parts) >= 3:
+                pid, mem, proc = parts[0], parts[1], parts[2]
+                proc_short = proc.split("/")[-1].split("\\")[-1]
+                compute_procs.append(f"  PID {pid}  {mem} MiB  {proc_short}")
+        if compute_procs:
+            gpu_lines.append("[bold]Compute processes:[/bold]")
+            gpu_lines.extend(compute_procs)
     console.print(Panel("\n".join(gpu_lines), title="GPU", border_style="green"))
+
+    # Services panel (Xwayland etc.)
+    svc_lines = []
+    if "ERROR" not in xwayland:
+        xw = xwayland.strip()
+        if "RUNNING" in xw and "NOT" not in xw:
+            svc_lines.append("[green]Xwayland: running[/green]")
+        else:
+            svc_lines.append("[red]Xwayland: NOT RUNNING[/red]")
+    else:
+        svc_lines.append(f"[red]Xwayland: unknown[/red] [dim]({xwayland})[/dim]")
+    console.print(Panel("\n".join(svc_lines), title="Services", border_style="magenta"))
 
     # Locks panel
     lock_lines = []
