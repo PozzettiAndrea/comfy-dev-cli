@@ -1,7 +1,16 @@
 """Publish test results to gh-pages branch.
 
-This module implements the `ct publish` command which publishes test results
-to a gh-pages branch for GitHub Pages hosting.
+This module implements the `cds publish` command which merges local test results
+(typically linux-gpu) into the gh-pages branch, preserving CI-published results
+for other platforms (e.g., windows-cpu from GitHub Actions).
+
+gh-pages structure:
+  {branch}/
+    index.html            <- platform tabs
+    {platform}/
+      index.html          <- test report
+      results.json
+  index.html              <- branch switcher
 """
 
 import shutil
@@ -12,38 +21,35 @@ from pathlib import Path
 
 from rich.console import Console
 
-from commands.show import find_latest_log
+from commands.show import find_latest_log, find_branches, PLATFORM_IDS
 from commands.test import find_repo
 
 console = Console()
 
-# Try to import report utilities
+# Try to import report utilities from comfy-test
 try:
     sys.path.insert(0, str(Path.home() / "utils" / "comfy-test" / "src"))
-    from comfy_test.report import has_platform_subdirs, PLATFORMS
+    from comfy_test.reporting.html_report import (
+        generate_html_report,
+        generate_root_index,
+        generate_branch_root_index,
+    )
     HAS_REPORT_UTILS = True
 except ImportError:
     HAS_REPORT_UTILS = False
-    PLATFORMS = [
-        {'id': 'linux-cpu'}, {'id': 'linux-gpu'},
-        {'id': 'windows-cpu'}, {'id': 'windows-gpu'},
-        {'id': 'windows-portable-cpu'}, {'id': 'windows-portable-gpu'},
-    ]
-
-    def has_platform_subdirs(output_dir):
-        for p in PLATFORMS:
-            if (output_dir / p['id'] / 'index.html').exists():
-                return True
-        return False
 
 
-def publish_results(repo_name: str, force: bool = False, push: bool = False) -> int:
-    """Publish test results to gh-pages branch.
+def publish_results(repo_name: str, force: bool = False, push: bool = True) -> int:
+    """Publish local test results to gh-pages branch.
+
+    Finds the latest test results, merges platform results into the existing
+    gh-pages structure (preserving CI-published platforms), regenerates HTML
+    indexes, and pushes.
 
     Args:
         repo_name: Repository name (e.g., depthanythingv3, geometrypack)
         force: Skip uncommitted changes check
-        push: Actually push to remote (default: just prepare locally)
+        push: Push to remote (default: True)
 
     Returns:
         Exit code (0 for success, 1 for error)
@@ -72,69 +78,87 @@ def publish_results(repo_name: str, force: bool = False, push: bool = False) -> 
     log_folder = find_latest_log(repo_name)
     if not log_folder:
         console.print(f"[red]No test results found for '{repo_name}'[/red]")
-        console.print(f"[dim]Run 'ct test {repo_name}' first[/dim]")
+        console.print(f"[dim]Run 'cds dev test {repo_name}' first[/dim]")
         return 1
 
     console.print(f"[dim]Results: {log_folder}[/dim]")
 
-    # Check required files exist
-    index_html = log_folder / "index.html"
-    if not index_html.exists():
-        console.print(f"[red]No index.html in {log_folder}[/red]")
+    # 4. Discover branches in the log folder
+    branches = find_branches(log_folder)
+    if not branches:
+        console.print(f"[red]No branch/platform structure found in {log_folder}[/red]")
+        console.print(f"[dim]Expected: {log_folder}/{{branch}}/{{platform}}/results.json[/dim]")
         return 1
 
-    # 4. Create/update gh-pages branch using git worktree
-    return _publish_with_worktree(repo_path, log_folder, push)
+    for b in branches:
+        # Show which platforms have results in this branch
+        platforms_found = [
+            pid for pid in PLATFORM_IDS
+            if (b / pid / "results.json").exists()
+        ]
+        console.print(f"[dim]  Branch: {b.name} -> {', '.join(platforms_found)}[/dim]")
+
+    # 5. Publish using worktree
+    return _publish_with_worktree(repo_path, branches, push)
 
 
-def _publish_with_worktree(repo_path: Path, log_folder: Path, push: bool = False) -> int:
+def _publish_with_worktree(
+    repo_path: Path,
+    branches: list[Path],
+    push: bool = True,
+) -> int:
     """Publish using git worktree to avoid touching the main branch.
+
+    Merges local results per-platform into gh-pages, preserving existing
+    results from CI for platforms we don't have new results for.
 
     Args:
         repo_path: Path to the git repository
-        log_folder: Path to the test results folder
+        branches: List of branch folders containing platform subdirs
         push: If True, push to remote after committing
 
     Returns:
         Exit code (0 for success, 1 for error)
     """
-    # Check if gh-pages branch exists (locally or remotely)
-    result = subprocess.run(
-        ["git", "branch", "-a"],
+    repo_name = repo_path.name
+
+    # Fetch gh-pages from remote (may only exist on origin, not locally)
+    console.print("[dim]Fetching gh-pages from origin...[/dim]")
+    # Delete stale local gh-pages branch if it exists (avoids ref conflicts)
+    subprocess.run(
+        ["git", "branch", "-D", "gh-pages"],
+        cwd=repo_path,
+        capture_output=True,
+    )
+    fetch_result = subprocess.run(
+        ["git", "fetch", "origin", "gh-pages"],
         cwd=repo_path,
         capture_output=True,
         text=True,
     )
-    branches = result.stdout
-    gh_pages_exists = "gh-pages" in branches
+    remote_has_gh_pages = fetch_result.returncode == 0
 
     # Create temp directory for worktree
     with tempfile.TemporaryDirectory() as tmpdir:
         worktree_path = Path(tmpdir) / "gh-pages"
 
         try:
-            if gh_pages_exists:
-                # Checkout existing gh-pages branch
-                console.print("[dim]Checking out existing gh-pages branch...[/dim]")
+            if remote_has_gh_pages:
+                # Checkout gh-pages from the fetched remote ref
+                console.print("[dim]Checking out gh-pages branch...[/dim]")
+
+                # Create local branch from fetched remote
                 result = subprocess.run(
-                    ["git", "worktree", "add", str(worktree_path), "gh-pages"],
+                    ["git", "worktree", "add", "-b", "gh-pages", str(worktree_path), "FETCH_HEAD"],
                     cwd=repo_path,
                     capture_output=True,
                     text=True,
                 )
                 if result.returncode != 0:
-                    # Branch might exist remotely but not locally
-                    result = subprocess.run(
-                        ["git", "worktree", "add", "-b", "gh-pages", str(worktree_path), "origin/gh-pages"],
-                        cwd=repo_path,
-                        capture_output=True,
-                        text=True,
-                    )
-                    if result.returncode != 0:
-                        console.print(f"[red]Failed to checkout gh-pages: {result.stderr}[/red]")
-                        return 1
+                    console.print(f"[red]Failed to checkout gh-pages: {result.stderr}[/red]")
+                    return 1
             else:
-                # Create new orphan gh-pages branch (worktree --orphan not available in older git)
+                # Create new orphan gh-pages branch
                 console.print("[dim]Creating new gh-pages branch...[/dim]")
 
                 # Create worktree with detached HEAD first
@@ -166,55 +190,43 @@ def _publish_with_worktree(repo_path: Path, log_folder: Path, push: bool = False
                     capture_output=True,
                 )
 
-            # Check if multi-platform structure
-            is_multi_platform = has_platform_subdirs(log_folder)
+            # --- Merge local results into gh-pages (per-branch, per-platform) ---
+            for branch_folder in branches:
+                branch_name = branch_folder.name
+                gh_branch_dir = worktree_path / branch_name
+                gh_branch_dir.mkdir(parents=True, exist_ok=True)
 
-            if is_multi_platform:
-                # Multi-platform: preserve existing platform results, only update what we have
-                console.print("[dim]Detected multi-platform structure[/dim]")
-
-                # Copy root index.html (regenerate it)
-                root_index = log_folder / "index.html"
-                if root_index.exists():
-                    shutil.copy2(root_index, worktree_path / "index.html")
-
-                # Copy each platform subdir we have results for
-                for p in PLATFORMS:
-                    platform_id = p['id']
-                    src_platform_dir = log_folder / platform_id
-                    dst_platform_dir = worktree_path / platform_id
-
-                    if (src_platform_dir / "index.html").exists():
-                        console.print(f"[dim]Copying {platform_id}...[/dim]")
-                        # Remove existing platform dir if present
-                        if dst_platform_dir.exists():
-                            shutil.rmtree(dst_platform_dir)
-                        # Copy the platform results
-                        shutil.copytree(src_platform_dir, dst_platform_dir)
-            else:
-                # Legacy single-platform: clear and replace everything
-                for item in worktree_path.iterdir():
-                    if item.name == ".git":
+                for platform_id in PLATFORM_IDS:
+                    src_platform = branch_folder / platform_id
+                    if not (src_platform / "results.json").exists():
                         continue
-                    if item.is_dir():
-                        shutil.rmtree(item)
-                    else:
-                        item.unlink()
 
-                # Copy test results to worktree
-                console.print("[dim]Copying test results...[/dim]")
-                files_to_copy = ["index.html", "results.json"]
-                dirs_to_copy = ["screenshots", "videos"]
+                    console.print(f"[dim]  Copying {branch_name}/{platform_id}...[/dim]")
+                    dst_platform = gh_branch_dir / platform_id
 
-                for filename in files_to_copy:
-                    src = log_folder / filename
-                    if src.exists():
-                        shutil.copy2(src, worktree_path / filename)
+                    # Remove old version of THIS platform only, preserve others
+                    if dst_platform.exists():
+                        shutil.rmtree(dst_platform)
+                    shutil.copytree(src_platform, dst_platform)
 
-                for dirname in dirs_to_copy:
-                    src = log_folder / dirname
-                    if src.exists():
-                        shutil.copytree(src, worktree_path / dirname)
+                # Regenerate HTML reports for all platforms in this branch
+                if HAS_REPORT_UTILS:
+                    for platform_id in PLATFORM_IDS:
+                        platform_dir = gh_branch_dir / platform_id
+                        if (platform_dir / "results.json").exists():
+                            try:
+                                generate_html_report(platform_dir, repo_name, current_platform=platform_id)
+                            except Exception as e:
+                                console.print(f"[yellow]  Warning generating {platform_id} report: {e}[/yellow]")
+
+                    # Regenerate branch index (platform tabs)
+                    console.print(f"[dim]  Generating {branch_name} index...[/dim]")
+                    generate_root_index(gh_branch_dir, repo_name)
+
+            # Regenerate root index (branch switcher)
+            if HAS_REPORT_UTILS:
+                console.print("[dim]Generating root index (branch switcher)...[/dim]")
+                generate_branch_root_index(worktree_path, repo_name)
 
             # Add .nojekyll file to disable Jekyll processing
             (worktree_path / ".nojekyll").touch()
@@ -259,10 +271,8 @@ def _publish_with_worktree(repo_path: Path, log_folder: Path, push: bool = False
             if "github.com" in remote_url:
                 # Handle both SSH and HTTPS URLs
                 if remote_url.startswith("git@"):
-                    # git@github.com:user/repo.git
                     parts = remote_url.replace("git@github.com:", "").replace(".git", "").split("/")
                 else:
-                    # https://github.com/user/repo.git
                     parts = remote_url.replace("https://github.com/", "").replace(".git", "").split("/")
 
                 if len(parts) >= 2:

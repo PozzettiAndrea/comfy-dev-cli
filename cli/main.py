@@ -84,7 +84,7 @@ def dev_test(
 @dev_app.command("publish")
 def dev_publish(
     repo_name: str = typer.Argument(..., help="Repository name (e.g., depthanythingv3)"),
-    push: bool = typer.Option(False, "--push", "-p", help="Push to remote (default: local only)"),
+    push: bool = typer.Option(True, "--push/--no-push", "-p", help="Push to remote (default: push)"),
     force: bool = typer.Option(False, "--force", "-f", help="Skip uncommitted changes check"),
 ):
     """Publish test results to gh-pages branch for GitHub Pages."""
@@ -205,7 +205,7 @@ def top_test(
 @app.command("publish", hidden=True)
 def top_publish(
     repo_name: str = typer.Argument(..., help="Repository name (e.g., depthanythingv3)"),
-    push: bool = typer.Option(False, "--push", "-p", help="Push to remote (default: local only)"),
+    push: bool = typer.Option(True, "--push/--no-push", "-p", help="Push to remote (default: push)"),
     force: bool = typer.Option(False, "--force", "-f", help="Skip uncommitted changes check"),
 ):
     """Publish test results to gh-pages branch for GitHub Pages."""
@@ -291,6 +291,13 @@ def monitor_repos():
         )
 
     console.print(table)
+
+
+@monitor_app.command("teststatus")
+def monitor_teststatus():
+    """Show test results status from gh-pages across all repos."""
+    from commands.teststatus import show_test_status
+    raise SystemExit(show_test_status())
 
 
 @monitor_app.command("runners")

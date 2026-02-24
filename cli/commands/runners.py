@@ -432,6 +432,7 @@ def monitor_runners():
             ' /home/administrator/.cache/rattler'
             ' /home/administrator/.cache/uv'
             ' /home/administrator/.cache/pip'
+            ' /home/administrator/.cache/huggingface'
             ' 2>/dev/null; true"',
             90,
         ), {}),
@@ -441,7 +442,8 @@ def monitor_runners():
             "C:\\Users\\Administrator\\.rattler "
             "C:\\Users\\Administrator\\AppData\\Local\\rattler "
             "C:\\Users\\Administrator\\AppData\\Local\\uv "
-            "C:\\Users\\Administrator\\AppData\\Local\\pip"
+            "C:\\Users\\Administrator\\AppData\\Local\\pip "
+            "C:\\Users\\Administrator\\.cache\\huggingface"
             ') do @if exist %d ('
             'echo ====%d '
             "& robocopy %d %d\\..\\__fake /L /S /NJH /NFL /NDL /BYTES /R:0 /W:0 2>nul"
@@ -548,6 +550,8 @@ def monitor_runners():
                             cache_lines.append(f"         [dim]{env_size:>7}  {env_name}[/dim]")
                     else:
                         cache_lines.append(f"  [dim]Win:[/dim]  [{color}]{sz_gb}GB[/{color}]  CE [dim]({path})[/dim]")
+                elif name == "huggingface":
+                    cache_lines.append(f"  [dim]Win:[/dim]  [{color}]{sz_gb}GB[/{color}]  HF cache [dim](shared win+wsl)[/dim]")
                 else:
                     cache_lines.append(f"  [dim]Win:[/dim]  [{color}]{sz_gb}GB[/{color}]  {name} [dim]({path})[/dim]")
     if "ERROR" not in caches_wsl and caches_wsl.strip():
@@ -574,6 +578,8 @@ def monitor_runners():
                             cache_lines.append(f"         [dim]{env_size:>7}  {env_name}[/dim]")
                     else:
                         cache_lines.append(f"  [dim]WSL:[/dim]  [{color}]{size}[/{color}]  CE [dim]({path})[/dim]")
+                elif name == "huggingface":
+                    cache_lines.append(f"  [dim]WSL:[/dim]  [{color}]{size}[/{color}]  HF cache [dim](WSL-native)[/dim]")
                 else:
                     cache_lines.append(f"  [dim]WSL:[/dim]  [{color}]{size}[/{color}]  {name} [dim]({path})[/dim]")
     if cache_lines:
