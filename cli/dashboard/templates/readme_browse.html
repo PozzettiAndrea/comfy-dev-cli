@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browse Repos - repo-tools</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        html, body { height: 100%; overflow: hidden; }
+        .sidebar { scrollbar-width: thin; scrollbar-color: #4b5563 #1f2937; }
+        .sidebar::-webkit-scrollbar { width: 6px; }
+        .sidebar::-webkit-scrollbar-track { background: #1f2937; }
+        .sidebar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+        .site-item.active { background: #164e63; border-left: 3px solid #22d3ee; }
+        .site-item { border-left: 3px solid transparent; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 h-screen flex flex-col">
+    <!-- Top bar -->
+    <div class="bg-gray-800 flex items-center gap-4 px-4 py-2 shrink-0">
+        <span class="text-cyan-400 font-bold text-sm shrink-0">Repos</span>
+
+        <div class="flex items-center gap-2 flex-1 max-w-3xl">
+            <button onclick="reloadFrame()" class="text-gray-400 hover:text-white px-1" title="Reload">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+            </button>
+            <div id="url-bar"
+                 class="flex-1 bg-gray-700 text-gray-400 text-sm px-3 py-1.5 rounded border border-gray-600 truncate select-none">
+                Select a repo...
+            </div>
+            <a id="open-external" href="#" target="_blank"
+               class="text-gray-400 hover:text-white px-1 shrink-0" title="Open on GitHub">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                </svg>
+            </a>
+        </div>
+
+        <span id="current-site-name" class="text-cyan-400 text-sm font-medium shrink-0"></span>
+    </div>
+
+    <!-- Main content: sidebar + iframe -->
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar -->
+        <div class="sidebar w-64 bg-gray-800 border-r border-gray-700 overflow-y-auto shrink-0 flex flex-col">
+            <div class="p-3 border-b border-gray-700">
+                <input type="text" id="site-search"
+                       class="w-full bg-gray-700 text-gray-100 text-sm px-3 py-1.5 rounded border border-gray-600 focus:border-cyan-500 focus:outline-none"
+                       placeholder="Filter repos..."
+                       oninput="filterSites(this.value)">
+            </div>
+
+            <div id="site-list" class="flex-1 overflow-y-auto">
+                {% for name in repo_names %}
+                <div class="site-item px-3 py-2 cursor-pointer hover:bg-gray-700 transition"
+                     data-name="{{ name }}"
+                     data-proxy="/proxy/{{ name }}"
+                     data-github="https://github.com/{{ github_owner }}/{{ name }}"
+                     onclick="selectSite(this)">
+                    <div class="text-sm font-medium truncate">{{ name }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="p-3 border-t border-gray-700 text-xs text-gray-500 text-center">
+                {{ repo_names|length }} repos
+            </div>
+        </div>
+
+        <!-- iframe viewer -->
+        <div class="flex-1 relative bg-gray-950">
+            <div id="empty-state" class="absolute inset-0 flex items-center justify-center">
+                <div class="text-center text-gray-500">
+                    <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <p class="text-lg">Select a repo to view</p>
+                    <p class="text-sm mt-1">or use Ctrl+K to search</p>
+                </div>
+            </div>
+            <iframe id="site-frame" class="w-full h-full border-0 hidden"></iframe>
+            <div id="loading-overlay" class="absolute inset-0 bg-gray-950 bg-opacity-80 items-center justify-center hidden">
+                <div class="text-cyan-400 text-lg">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const repos = [
+            {% for name in repo_names %}
+            { name: "{{ name }}", proxy: "/proxy/{{ name }}", github: "https://github.com/{{ github_owner }}/{{ name }}" },
+            {% endfor %}
+        ];
+
+        function selectSite(el) {
+            document.querySelectorAll('.site-item').forEach(item => item.classList.remove('active'));
+            el.classList.add('active');
+            loadUrl(el.dataset.proxy, el.dataset.name, el.dataset.github);
+        }
+
+        function loadUrl(proxyUrl, name, github) {
+            const frame = document.getElementById('site-frame');
+            const empty = document.getElementById('empty-state');
+            const loading = document.getElementById('loading-overlay');
+            const urlBar = document.getElementById('url-bar');
+            const external = document.getElementById('open-external');
+            const siteName = document.getElementById('current-site-name');
+
+            urlBar.textContent = github || proxyUrl;
+            external.href = github || '#';
+            siteName.textContent = name || '';
+
+            empty.classList.add('hidden');
+            frame.classList.remove('hidden');
+            loading.classList.remove('hidden');
+            loading.classList.add('flex');
+
+            frame.onload = function() {
+                loading.classList.add('hidden');
+                loading.classList.remove('flex');
+            };
+            frame.src = proxyUrl;
+
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('site', name || '');
+            history.replaceState({}, '', newUrl);
+        }
+
+        function reloadFrame() {
+            const frame = document.getElementById('site-frame');
+            if (frame.src) frame.src = frame.src;
+        }
+
+        function filterSites(query) {
+            query = query.toLowerCase();
+            document.querySelectorAll('.site-item').forEach(item => {
+                item.style.display = item.dataset.name.toLowerCase().includes(query) ? '' : 'none';
+            });
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('site-search').focus();
+            }
+            if (document.activeElement === document.getElementById('site-search')) {
+                const visible = [...document.querySelectorAll('.site-item')].filter(el => el.style.display !== 'none');
+                if (e.key === 'Enter' && visible.length > 0) {
+                    e.preventDefault();
+                    selectSite(visible[0]);
+                }
+            }
+        });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialSite = urlParams.get('site');
+        if (initialSite) {
+            const el = document.querySelector(`.site-item[data-name="${initialSite}"]`);
+            if (el) {
+                selectSite(el);
+                el.scrollIntoView({ block: 'center' });
+            }
+        }
+    </script>
+</body>
+</html>

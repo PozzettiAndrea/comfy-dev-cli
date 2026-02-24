@@ -1,5 +1,5 @@
-folder_name: meshseg
-conda_env_name: meshseg
+folder_name: meshsegmenter
+conda_env_name: meshsegmenter
 
 nodes_to_install:
   - https://github.com/PozzettiAndrea/ComfyUI-MeshSegmenter

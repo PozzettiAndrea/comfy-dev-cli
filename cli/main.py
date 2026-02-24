@@ -359,6 +359,17 @@ def monitor_pages(
     raise SystemExit(serve_pages(port))
 
 
+@monitor_app.command("readme")
+def monitor_readme(
+    port: int = typer.Argument(8002, help="Port to serve the readme browser on"),
+    threshold: int = typer.Option(..., "--threshold", "-t", help="Minimum star count to include"),
+):
+    """Browse all repo READMEs (main branch) in a local dashboard."""
+    require_github_token()
+    from commands.readme import serve_readmes
+    raise SystemExit(serve_readmes(port, threshold=threshold))
+
+
 @monitor_app.command("analyze-issues")
 def monitor_analyze_issues(
     repo_name: str = typer.Option(None, "--repo", "-r", help="Analyze specific repo only"),
