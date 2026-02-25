@@ -1,5 +1,0 @@
-folder_name: wala
-conda_env_name: wala
-
-nodes_to_install:
-  - https://github.com/PozzettiAndrea/ComfyUI-WaLa

@@ -22,7 +22,7 @@ async def home(request: Request):
     repo_stats = get_repo_stats()
 
     # Define special repo groups
-    COMFYUI_UTILITIES = {"comfy-env", "comfy-test", "ComfyUI-3D_nodes_index", "cuda-wheels", "cookiecutter-comfy-extension", "comfy-3d-viewers", "comfy-dynamic-widgets", "ComfyUI-validate-endpoint"}
+    COMFYUI_UTILITIES = {"comfy-env", "comfy-test", "ComfyUI-3D_nodes_index", "cuda-wheels", "cookiecutter-comfy-extension", "comfy-3d-viewers", "comfy-dynamic-widgets", "ComfyUI-validate-endpoint", "comfy-attn"}
     MISC_GEOMETRY = {"OCCT-RT", "occt-rt-python", "occt-diff", "PyMesh"}
 
     # Split repos into categories

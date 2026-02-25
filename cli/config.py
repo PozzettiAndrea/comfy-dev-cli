@@ -227,7 +227,7 @@ def refresh_repo_data() -> bool:
                 "url": repo.html_url,
                 "description": repo.description or "",
                 "stars": repo.stargazers_count,
-                "open_issues": repo.open_issues_count,
+                "open_issues": repo.open_issues_count - open_prs,
                 "open_prs": open_prs,
                 "forks": repo.forks_count,
                 "watchers": repo.watchers_count,
@@ -396,25 +396,58 @@ def _fetch_single_repo_stats(repo_name: str, token: str) -> tuple[str, dict]:
         except Exception:
             pass
 
-        # Check tests passing for main branch
-        try:
-            workflows = gh_repo.get_workflow_runs(status="completed", branch="main")
-            for run in workflows[:1]:
-                repo_stats["tests_passing_main"] = (run.conclusion == "success")
-                repo_stats["tests_main_url"] = run.html_url
-                break
-        except Exception:
-            pass
+        # Check tests passing via gh-pages results.json files
+        for branch in ("main", "dev"):
+            try:
+                import subprocess, base64
+                # List platform directories under {branch}/ on gh-pages
+                result = subprocess.run(
+                    ["gh", "api",
+                     f"repos/{GITHUB_OWNER}/{repo_name}/contents/{branch}?ref=gh-pages",
+                     "--jq", ".[].name",
+                     "--cache", "1m"],
+                    capture_output=True, text=True, timeout=15,
+                )
+                if result.returncode != 0:
+                    continue
 
-        # Check tests passing for dev branch
-        try:
-            workflows = gh_repo.get_workflow_runs(status="completed", branch="dev")
-            for run in workflows[:1]:
-                repo_stats["tests_passing_dev"] = (run.conclusion == "success")
-                repo_stats["tests_dev_url"] = run.html_url
-                break
-        except Exception:
-            pass
+                platform_dirs = [
+                    line.strip() for line in result.stdout.strip().split("\n")
+                    if line.strip() and not line.strip().endswith(".html")
+                ]
+
+                all_success = True
+                any_result = False
+                for platform_id in platform_dirs:
+                    try:
+                        result = subprocess.run(
+                            ["gh", "api",
+                             f"repos/{GITHUB_OWNER}/{repo_name}/contents/{branch}/{platform_id}/results.json?ref=gh-pages",
+                             "--jq", ".content",
+                             "--cache", "1m"],
+                            capture_output=True, text=True, timeout=15,
+                        )
+                        if result.returncode != 0:
+                            continue
+                        content = base64.b64decode(result.stdout.strip()).decode("utf-8")
+                        data = json.loads(content)
+                        success = data.get("success")
+                        if success is None:
+                            summary = data.get("summary", {})
+                            if summary.get("total", 0) > 0:
+                                success = summary.get("failed", 1) == 0
+                        if success is not None:
+                            any_result = True
+                            if not success:
+                                all_success = False
+                    except Exception:
+                        continue
+
+                if any_result:
+                    repo_stats[f"tests_passing_{branch}"] = all_success
+                    repo_stats[f"tests_{branch}_url"] = f"https://{GITHUB_OWNER}.github.io/{repo_name}/{branch}/"
+            except Exception:
+                pass
     except Exception:
         pass
 
