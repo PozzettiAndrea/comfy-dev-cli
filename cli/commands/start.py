@@ -37,7 +37,7 @@ def wait_for_port(port: int, poll_interval: float = 2.0) -> None:
     console.print(f"[green]Port {port} is now free[/green]")
 
 
-def start_comfyui(repo_name: str, port: int = None, cpu: bool = False) -> int:
+def start_comfyui(repo_name: str, port: int = None, cpu: bool = False, novram: bool = False) -> int:
     """Start ComfyUI in a virtual environment."""
     global logger
     logger = get_logger("start")
@@ -88,12 +88,16 @@ def start_comfyui(repo_name: str, port: int = None, cpu: bool = False) -> int:
     console.print(f"[dim]Path: {repo_path}[/dim]")
     if cpu:
         console.print(f"[dim]Mode: CPU[/dim]")
+    if novram:
+        console.print(f"[dim]Mode: NOVRAM[/dim]")
     console.print()
 
     # Run directly with venv python
     cmd = [str(env_python), "main.py", "--port", str(port), "--listen", "0.0.0.0"]
     if cpu:
         cmd.append("--cpu")
+    if novram:
+        cmd.append("--novram")
 
     logger.info(f"Starting ComfyUI: {' '.join(cmd)}")
     logger.info(f"Working directory: {repo_path}")

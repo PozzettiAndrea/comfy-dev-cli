@@ -62,10 +62,11 @@ def dev_start(
     repo_name: str = typer.Argument(..., help="Repository/environment name (e.g., trellis2, sam3)"),
     port: int = typer.Argument(None, help="Port to run ComfyUI on (default: 8188, auto-slides if not specified)"),
     cpu: bool = typer.Option(False, "--cpu", help="Run in CPU-only mode"),
+    novram: bool = typer.Option(False, "--novram", help="Run in no-VRAM mode"),
 ):
     """Start ComfyUI in a virtual environment."""
     from commands.start import start_comfyui
-    raise SystemExit(start_comfyui(repo_name, port, cpu))
+    raise SystemExit(start_comfyui(repo_name, port, cpu, novram))
 
 
 @dev_app.command("test")
@@ -185,9 +186,10 @@ def top_start(
     repo_name: str = typer.Argument(..., help="Repository/environment name (e.g., trellis2, sam3)"),
     port: int = typer.Argument(None, help="Port to run ComfyUI on (default: 8188, auto-slides if not specified)"),
     cpu: bool = typer.Option(False, "--cpu", help="Run in CPU-only mode"),
+    novram: bool = typer.Option(False, "--novram", help="Run in no-VRAM mode"),
 ):
     """Start ComfyUI in a virtual environment."""
-    dev_start(repo_name, port, cpu)
+    dev_start(repo_name, port, cpu, novram)
 
 
 @app.command("test", hidden=True)
