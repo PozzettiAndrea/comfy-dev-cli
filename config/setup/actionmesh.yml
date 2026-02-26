@@ -1,0 +1,5 @@
+folder_name: actionmesh
+conda_env_name: actionmesh
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-ActionMesh
