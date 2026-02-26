@@ -1,0 +1,5 @@
+folder_name: boltz
+conda_env_name: boltz
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-Boltz

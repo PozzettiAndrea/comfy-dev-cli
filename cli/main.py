@@ -63,10 +63,11 @@ def dev_start(
     port: int = typer.Argument(None, help="Port to run ComfyUI on (default: 8188, auto-slides if not specified)"),
     cpu: bool = typer.Option(False, "--cpu", help="Run in CPU-only mode"),
     novram: bool = typer.Option(False, "--novram", help="Run in no-VRAM mode"),
+    full_mem_log: bool = typer.Option(False, "--full-mem-log", help="Record all CUDA allocations with stack traces (snapshot in ~/vramlogs/)"),
 ):
     """Start ComfyUI in a virtual environment."""
     from commands.start import start_comfyui
-    raise SystemExit(start_comfyui(repo_name, port, cpu, novram))
+    raise SystemExit(start_comfyui(repo_name, port, cpu, novram, full_mem_log))
 
 
 @dev_app.command("test")
@@ -76,10 +77,12 @@ def dev_test(
     portable: bool = typer.Option(False, "--portable", "-P", help="Use windows-portable platform (Windows only)"),
     workflow: str = typer.Option(None, "--workflow", "-W", help="Run only this specific workflow"),
     force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing workspace directory"),
+    novram: bool = typer.Option(False, "--novram", help="Pass --novram to ComfyUI (no VRAM reservation)"),
+    full_mem_log: bool = typer.Option(False, "--full-mem-log", help="Record all CUDA allocations with stack traces (snapshot in ~/vramlogs/)"),
 ):
     """Run comfy-test locally."""
     from commands.test import run_test
-    raise SystemExit(run_test(repo_name, gpu=gpu, portable=portable, workflow=workflow, force=force))
+    raise SystemExit(run_test(repo_name, gpu=gpu, portable=portable, workflow=workflow, force=force, novram=novram, full_mem_log=full_mem_log))
 
 
 @dev_app.command("publish")
@@ -187,9 +190,10 @@ def top_start(
     port: int = typer.Argument(None, help="Port to run ComfyUI on (default: 8188, auto-slides if not specified)"),
     cpu: bool = typer.Option(False, "--cpu", help="Run in CPU-only mode"),
     novram: bool = typer.Option(False, "--novram", help="Run in no-VRAM mode"),
+    full_mem_log: bool = typer.Option(False, "--full-mem-log", help="Record all CUDA allocations with stack traces (snapshot in ~/vramlogs/)"),
 ):
     """Start ComfyUI in a virtual environment."""
-    dev_start(repo_name, port, cpu, novram)
+    dev_start(repo_name, port, cpu, novram, full_mem_log)
 
 
 @app.command("test", hidden=True)
@@ -199,9 +203,11 @@ def top_test(
     portable: bool = typer.Option(False, "--portable", "-P", help="Use windows-portable platform (Windows only)"),
     workflow: str = typer.Option(None, "--workflow", "-W", help="Run only this specific workflow"),
     force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing workspace directory"),
+    novram: bool = typer.Option(False, "--novram", help="Pass --novram to ComfyUI (no VRAM reservation)"),
+    full_mem_log: bool = typer.Option(False, "--full-mem-log", help="Record all CUDA allocations with stack traces (snapshot in ~/vramlogs/)"),
 ):
     """Run comfy-test locally."""
-    dev_test(repo_name, gpu, portable, workflow, force)
+    dev_test(repo_name, gpu, portable, workflow, force, novram, full_mem_log)
 
 
 @app.command("publish", hidden=True)

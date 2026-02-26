@@ -47,6 +47,8 @@ def run_test(
     verbose: bool = False,
     workflow: str = None,
     force: bool = False,
+    novram: bool = False,
+    full_mem_log: bool = False,
 ) -> int:
     """Run comfy-test locally."""
     if not ensure_comfy_test_installed():
@@ -63,7 +65,7 @@ def run_test(
     else:
         platform_name = "linux"
 
-    return run_direct(repo_path, platform_name=platform_name, gpu=gpu, verbose=verbose, workflow=workflow, force=force)
+    return run_direct(repo_path, platform_name=platform_name, gpu=gpu, verbose=verbose, workflow=workflow, force=force, novram=novram, full_mem_log=full_mem_log)
 
 
 def find_repo(repo_name: str) -> Path | None:
@@ -154,7 +156,7 @@ def get_git_branch(repo_path: Path) -> str:
     return "dev"
 
 
-def run_direct(repo_path: Path, platform_name: str = "windows", gpu: bool = False, verbose: bool = False, workflow: str = None, force: bool = False) -> int:
+def run_direct(repo_path: Path, platform_name: str = "windows", gpu: bool = False, verbose: bool = False, workflow: str = None, force: bool = False, novram: bool = False, full_mem_log: bool = False) -> int:
     """Run comfy-test directly without Docker (Windows)."""
     from datetime import datetime
 
@@ -199,6 +201,10 @@ def run_direct(repo_path: Path, platform_name: str = "windows", gpu: bool = Fals
         cmd.extend(["--workflow", workflow])
     if force:
         cmd.append("--force")
+    if novram:
+        cmd.append("--novram")
+    if full_mem_log:
+        cmd.append("--full-mem-log")
 
     console.print(f"[dim]$ {' '.join(cmd)}[/dim]")
 

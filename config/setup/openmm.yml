@@ -1,0 +1,5 @@
+folder_name: openmm
+conda_env_name: openmm
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-OpenMM

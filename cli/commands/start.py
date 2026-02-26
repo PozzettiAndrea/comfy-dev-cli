@@ -1,4 +1,5 @@
 """Start ComfyUI in a virtual environment."""
+import os
 import subprocess
 import socket
 import platform
@@ -7,6 +8,7 @@ from pathlib import Path
 from rich.console import Console
 
 from config import CT_ENVS_DIR, INSTALL_DIR, get_logger, COMMAND_NAME
+from commands.vram_monitor import VramMonitor
 
 console = Console()
 IS_WINDOWS = platform.system() == "Windows"
@@ -37,7 +39,7 @@ def wait_for_port(port: int, poll_interval: float = 2.0) -> None:
     console.print(f"[green]Port {port} is now free[/green]")
 
 
-def start_comfyui(repo_name: str, port: int = None, cpu: bool = False, novram: bool = False) -> int:
+def start_comfyui(repo_name: str, port: int = None, cpu: bool = False, novram: bool = False, full_mem_log: bool = False) -> int:
     """Start ComfyUI in a virtual environment."""
     global logger
     logger = get_logger("start")
@@ -90,9 +92,15 @@ def start_comfyui(repo_name: str, port: int = None, cpu: bool = False, novram: b
         console.print(f"[dim]Mode: CPU[/dim]")
     if novram:
         console.print(f"[dim]Mode: NOVRAM[/dim]")
+    if full_mem_log:
+        console.print(f"[dim]Mode: FULL-MEM-LOG[/dim]")
     console.print()
 
-    # Run directly with venv python
+    # Enable VRAM profiling in comfy-env (main process + workers)
+    if full_mem_log:
+        os.environ["COMFY_ENV_FULL_MEM_LOG"] = "1"
+        console.print(f"[dim]VRAM detail logs will be in ~/vramlogs/[/dim]")
+
     cmd = [str(env_python), "main.py", "--port", str(port), "--listen", "0.0.0.0"]
     if cpu:
         cmd.append("--cpu")
@@ -101,6 +109,9 @@ def start_comfyui(repo_name: str, port: int = None, cpu: bool = False, novram: b
 
     logger.info(f"Starting ComfyUI: {' '.join(cmd)}")
     logger.info(f"Working directory: {repo_path}")
+
+    # Start background VRAM monitor (skip in CPU-only mode)
+    vram_monitor = None
 
     try:
         # Use Popen to stream output to both terminal and log file
@@ -113,6 +124,10 @@ def start_comfyui(repo_name: str, port: int = None, cpu: bool = False, novram: b
             bufsize=1,  # Line buffered
         )
 
+        if not cpu:
+            vram_monitor = VramMonitor(process.pid, env_name=repo_name, interval=1)
+            vram_monitor.start()
+
         # Stream output line by line
         for line in process.stdout:
             line = line.rstrip()
@@ -120,9 +135,39 @@ def start_comfyui(repo_name: str, port: int = None, cpu: bool = False, novram: b
             logger.info(line)
 
         process.wait()
+        if vram_monitor:
+            peak = vram_monitor.stop()
+            total = vram_monitor.total_mib
+            pct = (peak / total * 100) if total > 0 else 0.0
+            console.print(f"\n[cyan][VRAM][/cyan] Peak: {peak} MiB / {total} MiB ({pct:.1f}%)")
+            if vram_monitor.log_path:
+                console.print(f"[dim]VRAM log: {vram_monitor.log_path}[/dim]")
+        if full_mem_log:
+            vramlogs = Path.home() / "vramlogs"
+            if vramlogs.exists():
+                csvs = sorted(vramlogs.glob("*_mem_detail.csv"), key=lambda p: p.stat().st_mtime, reverse=True)
+                if csvs:
+                    console.print(f"[cyan][VRAM][/cyan] Detail CSVs: {csvs[0]}")
+                pickles = sorted(vramlogs.glob("*_snapshot.pickle"), key=lambda p: p.stat().st_mtime, reverse=True)
+                if pickles:
+                    console.print(f"[cyan][VRAM][/cyan] Snapshot: {pickles[0]}")
+                    console.print(f"[dim]Visualize at https://pytorch.org/memory_viz[/dim]")
         logger.info(f"ComfyUI exited with code {process.returncode}")
         return process.returncode
     except KeyboardInterrupt:
-        console.print("\n[yellow]Stopped[/yellow]")
+        if vram_monitor:
+            peak = vram_monitor.stop()
+            total = vram_monitor.total_mib
+            pct = (peak / total * 100) if total > 0 else 0.0
+            console.print(f"\n[cyan][VRAM][/cyan] Peak: {peak} MiB / {total} MiB ({pct:.1f}%)")
+            if vram_monitor.log_path:
+                console.print(f"[dim]VRAM log: {vram_monitor.log_path}[/dim]")
+        if full_mem_log:
+            vramlogs = Path.home() / "vramlogs"
+            if vramlogs.exists():
+                csvs = sorted(vramlogs.glob("*_mem_detail.csv"), key=lambda p: p.stat().st_mtime, reverse=True)
+                if csvs:
+                    console.print(f"[cyan][VRAM][/cyan] Detail CSVs: {csvs[0]}")
+        console.print("[yellow]Stopped[/yellow]")
         logger.info("ComfyUI stopped by user (KeyboardInterrupt)")
         return 0
