@@ -36,6 +36,7 @@ else:
 ALL_REPOS_DIR = INSTALL_DIR / "all_repos"
 WHEEL_REPOS_DIR = INSTALL_DIR / "wheel_repos"
 UTILS_REPOS_DIR = INSTALL_DIR / "utils"
+BINDINGS_REPOS_DIR = INSTALL_DIR / "bindings"
 ISSUES_DIR = INSTALL_DIR / "issues"
 
 # Central directory for uv virtual environments (like conda's envs/)

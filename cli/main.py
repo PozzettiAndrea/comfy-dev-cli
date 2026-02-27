@@ -420,6 +420,14 @@ def clone_utils():
     clone_utils_repos(pull_existing=False)
 
 
+@clone_app.command("bindings")
+def clone_bindings():
+    """Clone all Python binding repos (pygeogram, pypmp, etc.) to ~/bindings/."""
+    require_github_token()
+    from commands.clone_bindings import clone_bindings_repos
+    clone_bindings_repos(pull_existing=False)
+
+
 @clone_app.command("pull")
 def clone_pull():
     """Pull latest changes for all cloned nodes in ~/all_repos/."""
