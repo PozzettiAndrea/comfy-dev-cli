@@ -79,10 +79,11 @@ def dev_test(
     force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing workspace directory"),
     novram: bool = typer.Option(False, "--novram", help="Pass --novram to ComfyUI (no VRAM reservation)"),
     full_mem_log: bool = typer.Option(False, "--full-mem-log", help="Record all CUDA allocations with stack traces (snapshot in ~/vramlogs/)"),
+    vram_debug: bool = typer.Option(False, "--vram-debug", help="Enable VRAM debug logging (logs model load/unload with per-module breakdown)"),
 ):
     """Run comfy-test locally."""
     from commands.test import run_test
-    raise SystemExit(run_test(repo_name, gpu=gpu, portable=portable, workflow=workflow, force=force, novram=novram, full_mem_log=full_mem_log))
+    raise SystemExit(run_test(repo_name, gpu=gpu, portable=portable, workflow=workflow, force=force, novram=novram, full_mem_log=full_mem_log, vram_debug=vram_debug))
 
 
 @dev_app.command("publish")
@@ -205,9 +206,10 @@ def top_test(
     force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing workspace directory"),
     novram: bool = typer.Option(False, "--novram", help="Pass --novram to ComfyUI (no VRAM reservation)"),
     full_mem_log: bool = typer.Option(False, "--full-mem-log", help="Record all CUDA allocations with stack traces (snapshot in ~/vramlogs/)"),
+    vram_debug: bool = typer.Option(False, "--vram-debug", help="Enable VRAM debug logging (logs model load/unload with per-module breakdown)"),
 ):
     """Run comfy-test locally."""
-    dev_test(repo_name, gpu, portable, workflow, force, novram, full_mem_log)
+    dev_test(repo_name, gpu, portable, workflow, force, novram, full_mem_log, vram_debug)
 
 
 @app.command("publish", hidden=True)
