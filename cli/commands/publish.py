@@ -28,7 +28,8 @@ console = Console()
 
 # Try to import report utilities from comfy-test
 try:
-    sys.path.insert(0, str(Path.home() / "utils" / "comfy-test" / "src"))
+    from config import UTILS_REPOS_DIR
+    sys.path.insert(0, str(UTILS_REPOS_DIR / "comfy-test" / "src"))
     from comfy_test.reporting.html_report import (
         generate_html_report,
         generate_root_index,

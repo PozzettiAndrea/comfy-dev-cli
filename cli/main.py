@@ -447,12 +447,12 @@ app.add_typer(oneshot_app, name="oneshot")
 
 
 # =============================================================================
-# PRIVATE EXTENSIONS (loaded from ~/coding-scripts/private/cli if exists)
+# PRIVATE EXTENSIONS (loaded from {ROOT_DIR}/private/cli if exists)
 # =============================================================================
 
 try:
-    from pathlib import Path
-    private_cli = Path.home() / "coding-scripts" / "private" / "cli"
+    from config import ROOT_DIR as _root
+    private_cli = _root / "private" / "cli"
     if private_cli.exists() and (private_cli / "extensions.py").exists():
         import sys
         sys.path.insert(0, str(private_cli))

@@ -59,8 +59,8 @@ def run_logged(cmd: list, check: bool = True, cwd=None) -> subprocess.CompletedP
     return subprocess.CompletedProcess(cmd, process.returncode, "\n".join(output_lines), "")
 
 
-# Paths - use fixed location so it works when installed globally
-CONFIG_DIR = Path.home() / "coding-scripts" / "comfy-dev-cli" / "config" / "setup"
+# Paths - derive from file location so it works regardless of install path
+CONFIG_DIR = Path(__file__).parent.parent.parent / "config" / "setup"
 
 
 def list_configs():
