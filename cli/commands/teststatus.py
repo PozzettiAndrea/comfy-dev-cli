@@ -18,7 +18,7 @@ from config import GITHUB_OWNER
 console = Console()
 
 # Repos dir
-ALL_REPOS_DIR = Path.home() / "all_repos"
+from config import ALL_REPOS_DIR
 
 # Branches to check on gh-pages
 BRANCHES = ["dev", "main"]

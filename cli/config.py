@@ -10,8 +10,8 @@ from typing import Optional
 import yaml
 from dotenv import load_dotenv
 
-# Paths - use fixed location so it works when installed globally
-ROOT_DIR = Path.home() / "coding-scripts"
+# Paths - CDS_ROOT points to comfy-dev-cli/, ROOT_DIR is its parent (coding-scripts/)
+ROOT_DIR = Path(os.environ["CDS_ROOT"]).parent if "CDS_ROOT" in os.environ else Path.home() / "coding-scripts"
 CLI_DIR = ROOT_DIR / "cli"
 PRIVATE_DIR = ROOT_DIR / "private"
 
@@ -28,11 +28,11 @@ NOTES_DIR = ROOT_DIR / "notes"
 
 # Clone target directories (sibling to coding-scripts)
 HOME_DIR = Path.home()
-# On Windows, use Desktop; on Linux, use home directory
+# On Windows, use Desktop; on Linux, use ROOT_DIR's parent
 if platform.system() == "Windows":
     INSTALL_DIR = HOME_DIR / "Desktop"
 else:
-    INSTALL_DIR = HOME_DIR
+    INSTALL_DIR = ROOT_DIR.parent
 ALL_REPOS_DIR = INSTALL_DIR / "all_repos"
 WHEEL_REPOS_DIR = INSTALL_DIR / "wheel_repos"
 UTILS_REPOS_DIR = INSTALL_DIR / "utils"
@@ -537,6 +537,7 @@ def save_github_token(token: str) -> None:
     new_lines = [line for line in lines if not line.startswith("GITHUB_TOKEN=")]
     new_lines.append(f"GITHUB_TOKEN={token}")
 
+    ENV_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(ENV_FILE, "w") as f:
         f.write("\n".join(new_lines) + "\n")
 

@@ -13,11 +13,10 @@ from tqdm import tqdm
 console = Console()
 
 # Paths
-ROOT_DIR = Path(__file__).parent.parent.parent
-COMMAND_CENTER_DIR = ROOT_DIR / "command-center"
+from config import COMMAND_CENTER_DIR, ALL_REPOS_DIR
+
 ANALYSIS_DIR = COMMAND_CENTER_DIR / "issue_analysis"
 ANALYSIS_META_FILE = ANALYSIS_DIR / "_meta.json"
-ALL_REPOS_DIR = ROOT_DIR.parent / "all_repos"
 
 
 def issue_hash(issue) -> str:
