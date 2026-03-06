@@ -1,0 +1,5 @@
+folder_name: trellis2-vb
+conda_env_name: trellis2-vb
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-Trellis2-vbfork
