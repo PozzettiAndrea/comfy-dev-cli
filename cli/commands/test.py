@@ -164,14 +164,13 @@ def run_direct(repo_path: Path, platform_name: str = "windows", gpu: bool = Fals
     mode = "GPU" if gpu else "CPU"
     console.print(f"[bold cyan]Running comfy-test directly ({platform_name}, {mode} mode)[/bold cyan]")
 
-    # Use COMFY_TEST_LOGS_DIR if set, otherwise default to ~/logs or ~/Desktop/logs
+    # Use COMFY_TEST_LOGS_DIR if set, otherwise default to INSTALL_DIR/logs
+    from config import INSTALL_DIR
     logs_dir_env = os.environ.get("COMFY_TEST_LOGS_DIR")
     if logs_dir_env:
         logs_dir = Path(logs_dir_env)
-    elif platform.system() == "Windows":
-        logs_dir = Path.home() / "Desktop" / "logs"
     else:
-        logs_dir = Path.home() / "logs"
+        logs_dir = INSTALL_DIR / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
     repo_short = repo_path.name.replace("ComfyUI-", "")
     timestamp = datetime.now().strftime("%H%M")
@@ -189,6 +188,8 @@ def run_direct(repo_path: Path, platform_name: str = "windows", gpu: bool = Fals
         os.environ["COMFY_TEST_LOGS_DIR"] = str(logs_dir)
     if "COMFY_TEST_WORKSPACE_DIR" not in os.environ:
         os.environ["COMFY_TEST_WORKSPACE_DIR"] = str(logs_dir.parent / "workspaces")
+    if "COMFY_TEST_LOCAL_UTILS" not in os.environ:
+        os.environ["COMFY_TEST_LOCAL_UTILS"] = str(UTILS_REPOS_DIR)
     if gpu:
         os.environ["COMFY_TEST_GPU"] = "1"
 

@@ -265,6 +265,24 @@ def top_activate(
     dev_activate(env_name)
 
 
+@app.command("screen")
+def top_screen(
+    port: int = typer.Argument(..., help="Port to screenshot (e.g., 8188)"),
+    wait: int = typer.Option(3000, "--wait", "-w", help="Wait time in ms after page load"),
+    output: str = typer.Option(None, "--output", "-o", help="Override output file path"),
+):
+    """Take a screenshot of localhost on the given port, saved to /home/work."""
+    from commands.screenshot import take_screenshot
+    from pathlib import Path
+    from datetime import datetime
+    if output:
+        output_path = Path(output)
+    else:
+        time_str = datetime.now().strftime("%H%M")
+        output_path = Path("/home/work") / f"screen_{port}_{time_str}.png"
+    raise SystemExit(take_screenshot(port, wait_ms=wait, output_path=output_path))
+
+
 # =============================================================================
 # MONITOR subcommand group
 # =============================================================================
