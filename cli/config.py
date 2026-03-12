@@ -40,7 +40,7 @@ BINDINGS_REPOS_DIR = INSTALL_DIR / "bindings"
 ISSUES_DIR = INSTALL_DIR / "issues"
 
 # Central directory for uv virtual environments (like conda's envs/)
-CT_ENVS_DIR = HOME_DIR / "ct-envs"
+CT_ENVS_DIR = INSTALL_DIR / "ct-envs"
 
 # Command name (configurable via command_name.txt)
 _COMMAND_NAME_FILE = ROOT_DIR / "comfy-dev-cli" / "command_name.txt"
