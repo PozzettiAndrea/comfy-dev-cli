@@ -148,10 +148,10 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
             requirements_file.write_text(content)
 
     # Create virtual environment with uv
+    # Pin to Python 3.12 — PyTorch doesn't have wheels for 3.14+ yet
     CT_ENVS_DIR.mkdir(parents=True, exist_ok=True)
     console.print(f"Creating virtual environment [cyan]{env_name}[/cyan]...")
-    py_version = f"{sys.version_info.major}.{sys.version_info.minor}"
-    run_logged(["uv", "venv", str(env_path), "--python", py_version])
+    run_logged(["uv", "venv", str(env_path), "--python", "3.12"])
 
     # Get the python path for the new env
     if IS_WINDOWS:

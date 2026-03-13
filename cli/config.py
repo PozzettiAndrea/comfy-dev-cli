@@ -3,6 +3,7 @@
 import json
 import os
 import platform
+import subprocess
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
@@ -507,8 +508,19 @@ def get_repo_stats() -> dict:
 
 # Environment variables
 def get_github_token() -> Optional[str]:
-    """Get GitHub token from environment."""
-    return os.environ.get("GITHUB_TOKEN")
+    """Get GitHub token from environment or gh CLI."""
+    token = os.environ.get("GITHUB_TOKEN")
+    if token:
+        return token
+    try:
+        result = subprocess.run(
+            ["gh", "auth", "token"], capture_output=True, text=True
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except FileNotFoundError:
+        pass
+    return None
 
 
 def verify_github_token(token: str) -> bool:

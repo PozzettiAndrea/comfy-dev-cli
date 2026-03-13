@@ -61,6 +61,10 @@ if ! gh auth status --hostname github.com >/dev/null 2>&1; then
   echo "✅ GitHub authenticated"
 fi
 
+# ================= git credential helper ======
+# Use gh CLI as credential helper so git uses gh's stored credentials
+git config --global credential.helper '!gh auth git-credential'
+
 # ================= done =====================
 echo "🎉 Setup complete"
 echo "• cds available everywhere"
