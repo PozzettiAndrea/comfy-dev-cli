@@ -448,6 +448,13 @@ def clone_bindings():
     clone_bindings_repos(pull_existing=False)
 
 
+@clone_app.command("cudageom")
+def clone_cudageom():
+    """Clone CUDA geometry repos (quadwild, QuadriFlow, instant-meshes) to ~/cudageom/."""
+    from commands.clone_cudageom import clone_cudageom_repos
+    clone_cudageom_repos(pull_existing=False)
+
+
 @clone_app.command("pull")
 def clone_pull():
     """Pull latest changes for all cloned nodes in ~/all_repos/."""
