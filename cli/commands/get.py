@@ -5,6 +5,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import time as _time
 from pathlib import Path
 
 import yaml
@@ -16,12 +17,83 @@ console = Console()
 IS_WINDOWS = platform.system() == "Windows"
 logger = None  # Initialized in setup_comfyui
 
+_step_start = 0.0
+_total_start = 0.0
+
+def _tick(label: str):
+    """Print elapsed time since last tick and start a new timed section."""
+    global _step_start
+    now = _time.monotonic()
+    if _step_start:
+        elapsed = now - _step_start
+        console.print(f"  [dim]({elapsed:.1f}s)[/dim]")
+    _step_start = now
+    console.print(f"\n[bold]{label}[/bold]")
+
+def _done():
+    """Print final timing summary."""
+    now = _time.monotonic()
+    if _step_start:
+        elapsed = now - _step_start
+        console.print(f"  [dim]({elapsed:.1f}s)[/dim]")
+    total = now - _total_start
+    console.print(f"\n[bold green]Total: {total:.1f}s[/bold green]")
+
 
 def force_remove_readonly(func, path, exc_info):
     """Error handler for shutil.rmtree to handle read-only files on Windows."""
     import stat
     os.chmod(path, stat.S_IWRITE)
     func(path)
+
+
+def fast_rmtree(path: Path):
+    """Fast directory removal. Parallelizes across subdirectories on Windows."""
+    path = Path(path)
+    if not path.exists():
+        console.print(f"  [dim](already gone)[/dim]")
+        return
+    if IS_WINDOWS:
+        t0 = _time.monotonic()
+        # Collect top-level subdirs for parallel deletion
+        subdirs = [d for d in path.iterdir() if d.is_dir()]
+        files = [f for f in path.iterdir() if f.is_file()]
+
+        # Delete files in root
+        for f in files:
+            try:
+                f.unlink()
+            except OSError:
+                pass
+
+        # Spawn parallel rd /s /q on each subdir
+        workers = min(os.cpu_count() or 8, len(subdirs)) if subdirs else 0
+        console.print(f"  [dim]{len(subdirs)} subdirs, {len(files)} files, {workers} workers[/dim]")
+        procs = []
+        for d in subdirs:
+            p = subprocess.Popen(
+                ["cmd", "/c", "rd", "/s", "/q", str(d)],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            procs.append(p)
+
+        # Wait for all to finish
+        for p in procs:
+            p.wait()
+
+        # Remove now-empty root
+        for attempt in range(3):
+            try:
+                if path.exists():
+                    shutil.rmtree(path, onerror=force_remove_readonly)
+                break
+            except OSError:
+                _time.sleep(0.5)
+
+        t1 = _time.monotonic()
+        console.print(f"  [dim]{t1-t0:.1f}s, gone={not path.exists()}[/dim]")
+    else:
+        shutil.rmtree(path, onerror=force_remove_readonly)
 
 
 def run_logged(cmd: list, check: bool = True, cwd=None) -> subprocess.CompletedProcess:
@@ -59,8 +131,9 @@ def run_logged(cmd: list, check: bool = True, cwd=None) -> subprocess.CompletedP
     return subprocess.CompletedProcess(cmd, process.returncode, "\n".join(output_lines), "")
 
 
-# Paths - derive from file location so it works regardless of install path
-CONFIG_DIR = Path(__file__).parent.parent.parent / "config" / "setup"
+# Paths - use ROOT_DIR from config (works regardless of install path)
+from config import ROOT_DIR as _ROOT_DIR
+CONFIG_DIR = _ROOT_DIR / "comfy-dev-cli" / "config" / "setup"
 
 
 def list_configs():
@@ -75,9 +148,10 @@ def list_configs():
 
 def setup_comfyui(config_name: str, reinstall: bool = False):
     """Set up a ComfyUI environment from a YAML config."""
-    global logger
+    global logger, _total_start
     logger = get_logger("get")
     logger.info(f"Starting setup for config: {config_name}")
+    _total_start = _time.monotonic()
 
     config_file = CONFIG_DIR / f"{config_name}.yml"
 
@@ -111,12 +185,12 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
     if reinstall:
         console.print("[yellow]=== REINSTALL MODE ===[/yellow]")
         if install_path.exists():
-            console.print(f"Deleting existing folder: {install_path}")
-            shutil.rmtree(install_path, onerror=force_remove_readonly)
+            _tick(f"Deleting existing folder: {install_path}")
+            fast_rmtree(install_path)
 
         if env_path.exists():
-            console.print(f"Removing existing venv: {env_path}")
-            shutil.rmtree(env_path, onerror=force_remove_readonly)
+            _tick(f"Removing existing venv: {env_path}")
+            fast_rmtree(env_path)
         console.print("[yellow]======================[/yellow]")
 
     console.print(f"Setting up ComfyUI in [cyan]{install_path}[/cyan] with venv [cyan]{env_name}[/cyan]")
@@ -126,13 +200,14 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
     os.chdir(install_path)
 
     if not comfyui_path.exists():
-        console.print("Cloning ComfyUI...")
+        _tick("Cloning ComfyUI...")
         run_logged(["git", "clone", "--depth", "1", "https://github.com/comfyanonymous/ComfyUI.git"])
 
     custom_nodes_path = comfyui_path / "custom_nodes"
+    custom_nodes_path.mkdir(parents=True, exist_ok=True)
     manager_path = custom_nodes_path / "ComfyUI-Manager"
     if not manager_path.exists():
-        console.print("Cloning ComfyUI-Manager...")
+        _tick("Cloning ComfyUI-Manager...")
         os.chdir(custom_nodes_path)
         run_logged(["git", "clone", "--depth", "1", "https://github.com/Comfy-Org/ComfyUI-Manager.git"])
 
@@ -148,10 +223,9 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
             requirements_file.write_text(content)
 
     # Create virtual environment with uv
-    # Pin to Python 3.12 — PyTorch doesn't have wheels for 3.14+ yet
     CT_ENVS_DIR.mkdir(parents=True, exist_ok=True)
-    console.print(f"Creating virtual environment [cyan]{env_name}[/cyan]...")
-    run_logged(["uv", "venv", str(env_path), "--python", "3.12"])
+    _tick(f"Creating venv {env_name}...")
+    run_logged(["uv", "venv", str(env_path), "--python", "3.13", "--clear"])
 
     # Get the python path for the new env
     if IS_WINDOWS:
@@ -160,7 +234,7 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
         env_python = env_path / "bin" / "python"
 
     # Install PyTorch with CUDA support first (before requirements.txt)
-    console.print("Installing PyTorch with CUDA support...")
+    _tick("Installing PyTorch with CUDA support...")
     run_logged([
         "uv", "pip", "install",
         "torch==2.8.0", "torchvision", "torchaudio",
@@ -171,15 +245,15 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
     # Install ComfyUI-Manager requirements
     manager_reqs = manager_path / "requirements.txt"
     if manager_reqs.exists():
-        console.print("Installing ComfyUI-Manager requirements...")
+        _tick("Installing ComfyUI-Manager requirements...")
         run_logged(["uv", "pip", "install", "-r", str(manager_reqs), "--python", str(env_python)])
 
     # Install ComfyUI requirements (torch already installed with CUDA)
-    console.print("Installing ComfyUI requirements...")
+    _tick("Installing ComfyUI requirements...")
     run_logged(["uv", "pip", "install", "-r", str(requirements_file), "--python", str(env_python)])
 
     # Install local dev packages EARLY (so install.py uses local version with fixes)
-    console.print("Installing local dev packages (editable)...")
+    _tick("Installing local dev packages (early)...")
     utils_dir = UTILS_REPOS_DIR
     for pkg in ["comfy-env", "comfy-test", "comfy-3d-viewers", "comfy-attn"]:
         pkg_path = utils_dir / pkg
@@ -198,7 +272,7 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
         console.print(f"[dim]Created constraints file: {constraints_file}[/dim]")
 
     # Install custom nodes
-    console.print("Installing custom nodes...")
+    _tick("Installing custom nodes...")
     for node in nodes_to_install:
         if isinstance(node, dict):
             url = node.get("url", "")
@@ -214,7 +288,7 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
         target = custom_nodes_path / name
 
         branch_info = f" (branch: {branch})" if branch else ""
-        console.print(f"  Installing [cyan]{name}[/cyan]{branch_info}")
+        _tick(f"  Node: {name}{branch_info}")
 
         if target.exists():
             console.print(f"    [yellow]Already exists, skipping clone[/yellow]")
@@ -254,14 +328,14 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
                         run_logged([str(isolated_pip), "install", "-e", str(pkg_path)], check=False)
 
     # Install local dev packages LAST (to override any versions from custom node requirements)
-    console.print("Installing local dev packages (editable)...")
+    _tick("Installing local dev packages (final)...")
     utils_dir = UTILS_REPOS_DIR
     for pkg in ["comfy-env", "comfy-test", "comfy-3d-viewers", "comfy-attn"]:
         pkg_path = utils_dir / pkg
         if pkg_path.exists():
             run_logged(["uv", "pip", "install", "-e", str(pkg_path), "--python", str(env_python)])
 
-    console.print()
+    _done()
     console.print(f"[green]Done![/green] Run with: [cyan]{COMMAND_NAME} start {env_name}[/cyan]")
     console.print(f"Or manually: [cyan]cd {comfyui_path} && \"{env_python}\" main.py[/cyan]")
     logger.info(f"Setup complete for {config_name}")

@@ -12,7 +12,9 @@ import yaml
 from dotenv import load_dotenv
 
 # Paths - CDS_ROOT points to comfy-dev-cli/, ROOT_DIR is its parent (coding-scripts/)
-ROOT_DIR = Path(os.environ["CDS_ROOT"]).parent if "CDS_ROOT" in os.environ else Path.home() / "coding-scripts"
+# Use CDS_ROOT env var if set, otherwise fall back to D:\coding-scripts (default dev location)
+_default_root = "D:\\coding-scripts" if platform.system() == "Windows" else str(Path(__file__).resolve().parent.parent.parent)
+ROOT_DIR = Path(os.environ.get("CDS_ROOT", _default_root))
 CLI_DIR = ROOT_DIR / "cli"
 PRIVATE_DIR = ROOT_DIR / "private"
 
@@ -28,12 +30,7 @@ REPO_NOTES_FILE = COMMAND_CENTER_DIR / "repo_notes.csv"
 NOTES_DIR = ROOT_DIR / "notes"
 
 # Clone target directories (sibling to coding-scripts)
-HOME_DIR = Path.home()
-# On Windows, use Desktop; on Linux, use ROOT_DIR's parent
-if platform.system() == "Windows":
-    INSTALL_DIR = HOME_DIR / "Desktop"
-else:
-    INSTALL_DIR = ROOT_DIR.parent
+INSTALL_DIR = ROOT_DIR.parent
 ALL_REPOS_DIR = INSTALL_DIR / "all_repos"
 WHEEL_REPOS_DIR = INSTALL_DIR / "wheel_repos"
 UTILS_REPOS_DIR = INSTALL_DIR / "utils"

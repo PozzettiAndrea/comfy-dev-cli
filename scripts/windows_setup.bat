@@ -95,7 +95,7 @@ if errorlevel 1 (
 
 :: ================= git credential helper ========
 :: Use gh CLI as credential helper so git uses gh's stored credentials
-git config --global credential.helper "!gh auth git-credential"
+git config --global --replace-all credential.helper "!gh auth git-credential"
 echo Git credential helper set to gh CLI
 
 :: ================= done =======================
