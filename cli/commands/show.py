@@ -87,10 +87,9 @@ def find_latest_log(repo_name: str, timestamp: str = None) -> Optional[Path]:
     logs_dir_env = os.environ.get("COMFY_TEST_LOGS_DIR")
     if logs_dir_env:
         logs_dir = Path(logs_dir_env)
-    elif platform.system() == "Windows":
-        logs_dir = Path.home() / "Desktop" / "logs"
     else:
-        logs_dir = Path.home() / "logs"
+        from config import INSTALL_DIR
+        logs_dir = INSTALL_DIR / "logs"
 
     if not logs_dir.exists():
         return None
@@ -150,10 +149,9 @@ def show_results(repo_name: str, port: int = 8001, regenerate: bool = False, tim
         logs_dir_env = os.environ.get("COMFY_TEST_LOGS_DIR")
         if logs_dir_env:
             logs_path = logs_dir_env
-        elif platform.system() == "Windows":
-            logs_path = "~/Desktop/logs/"
         else:
-            logs_path = "~/logs/"
+            from config import INSTALL_DIR
+            logs_path = str(INSTALL_DIR / "logs")
         console.print(f"[dim]Searched in: {logs_path}[/dim]")
         return 1
 
