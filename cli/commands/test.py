@@ -60,9 +60,11 @@ def run_test(
         return 1
 
     # Determine platform
-    is_windows = platform.system() == "Windows"
-    if is_windows:
+    system = platform.system()
+    if system == "Windows":
         platform_name = "windows-portable" if portable else "windows"
+    elif system == "Darwin":
+        platform_name = "macos"
     else:
         platform_name = "linux"
 

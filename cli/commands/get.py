@@ -15,6 +15,7 @@ from config import UTILS_REPOS_DIR, CT_ENVS_DIR, INSTALL_DIR, get_logger, COMMAN
 
 console = Console()
 IS_WINDOWS = platform.system() == "Windows"
+IS_MAC = platform.system() == "Darwin"
 logger = None  # Initialized in setup_comfyui
 
 _step_start = 0.0
@@ -233,14 +234,22 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
     else:
         env_python = env_path / "bin" / "python"
 
-    # Install PyTorch with CUDA support first (before requirements.txt)
-    _tick("Installing PyTorch with CUDA support...")
-    run_logged([
-        "uv", "pip", "install",
-        "torch==2.8.0", "torchvision", "torchaudio",
-        "--index-url", "https://download.pytorch.org/whl/cu128",
-        "--python", str(env_python)
-    ])
+    # Install PyTorch — CUDA on Linux/Windows, native on Mac
+    if IS_MAC:
+        _tick("Installing PyTorch (macOS, no CUDA)...")
+        run_logged([
+            "uv", "pip", "install",
+            "torch==2.8.0", "torchvision", "torchaudio",
+            "--python", str(env_python)
+        ])
+    else:
+        _tick("Installing PyTorch with CUDA support...")
+        run_logged([
+            "uv", "pip", "install",
+            "torch==2.8.0", "torchvision", "torchaudio",
+            "--index-url", "https://download.pytorch.org/whl/cu128",
+            "--python", str(env_python)
+        ])
 
     # Install ComfyUI-Manager requirements
     manager_reqs = manager_path / "requirements.txt"

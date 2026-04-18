@@ -25,6 +25,9 @@ dependencies = [
     "jinja2>=3.1.2",
     "python-multipart>=0.0.6",
 
+    # Report generation (used by cds show)
+    "tomli>=2.0.0; python_version < '3.11'",
+
     # Utilities
     "python-dotenv>=1.0.0",
     "httpx>=0.26.0",
