@@ -4,9 +4,16 @@ set -e
 # ================= helpers =================
 has() { command -v "$1" >/dev/null 2>&1; }
 
+# ---- detect shell RC file ----
+if [ -n "$ZSH_VERSION" ] || [[ "$SHELL" == */zsh ]]; then
+  RC_FILE="$HOME/.zshrc"
+else
+  RC_FILE="$HOME/.bashrc"
+fi
+
 # ---- ensure ~/.local/bin is in PATH ----
 export PATH="$HOME/.local/bin:$PATH"
-grep -q '.local/bin' ~/.bashrc || echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+grep -q '.local/bin' "$RC_FILE" || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$RC_FILE"
 
 # ================= Claude ==================
 if ! has claude; then
@@ -26,15 +33,19 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # ================= cds CLI (global) ========
 uv tool install --force --editable "$PROJECT_ROOT/cli"
-grep -q 'CDS_ROOT' ~/.bashrc || echo "export CDS_ROOT=\"$PROJECT_ROOT\"" >> ~/.bashrc
-export CDS_ROOT="$PROJECT_ROOT"
+# CDS_ROOT not needed — config.py auto-detects coding-scripts/ via __file__
+# Only set it if explicitly overriding the default location
 echo "✅ cds installed globally"
 
 # ================= GitHub CLI ===============
 if ! has gh; then
-  GH_VERSION="2.63.2"
-  curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" | \
-    sudo tar -xz -C /usr/local --strip-components=1
+  if [[ "$(uname)" == "Darwin" ]]; then
+    brew install gh
+  else
+    GH_VERSION="2.63.2"
+    curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" | \
+      sudo tar -xz -C /usr/local --strip-components=1
+  fi
   echo "✅ GitHub CLI installed"
 fi
 
