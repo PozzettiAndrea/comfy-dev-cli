@@ -239,14 +239,14 @@ def setup_comfyui(config_name: str, reinstall: bool = False):
         _tick("Installing PyTorch (macOS, no CUDA)...")
         run_logged([
             "uv", "pip", "install",
-            "torch==2.8.0", "torchvision", "torchaudio",
+            "torch==2.8.0", "torchvision==0.23.*", "torchaudio==2.8.*",
             "--python", str(env_python)
         ])
     else:
         _tick("Installing PyTorch with CUDA support...")
         run_logged([
             "uv", "pip", "install",
-            "torch==2.8.0", "torchvision", "torchaudio",
+            "torch==2.8.0", "torchvision==0.23.*", "torchaudio==2.8.*",
             "--index-url", "https://download.pytorch.org/whl/cu128",
             "--python", str(env_python)
         ])
