@@ -1,0 +1,5 @@
+folder_name: hywm2
+conda_env_name: hywm2
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-HYWM2

@@ -40,9 +40,22 @@ from .extractors import (
 CLI_DIR = Path(__file__).parent.parent
 ROOT_DIR = CLI_DIR.parent
 ONESHOT_CONFIG_DIR = ROOT_DIR / "config" / "oneshot"
-ONESHOTS_DIR = Path("/home/shadeform/oneshots")
+ONESHOTS_DIR = Path(os.environ.get("CDS_ONESHOTS_DIR", Path.cwd() / "oneshots"))
 ONESHOT_CACHE_DIR = ONESHOTS_DIR  # Use same directory for everything
 ACTIVE_CONFIG_FILE = ONESHOTS_DIR / ".active"
+
+# Reference paths used to give Claude context during `assess` and later stages.
+# Override with env vars if your layout differs.
+CUDA_WHEELS_DIR = Path(os.environ.get("CDS_CUDA_WHEELS_DIR", "/home/work/utils/cuda-wheels"))
+COMFY_ENV_DIR = Path(os.environ.get("CDS_COMFY_ENV_DIR", "/home/work/utils/comfy-env"))
+EXAMPLE_NODE_PACKS = [
+    Path(p) for p in os.environ.get(
+        "CDS_EXAMPLE_NODE_PACKS",
+        "/home/work/cadabra/ComfyUI/custom_nodes/ComfyUI-CADabra,"
+        "/home/work/depthanythingv3/ComfyUI/custom_nodes/ComfyUI-DepthAnythingV3,"
+        "/home/work/sam3dobjects/ComfyUI/custom_nodes/ComfyUI-SAM3DObjects"
+    ).split(",") if p.strip()
+]
 
 console = Console()
 
@@ -667,6 +680,15 @@ def assess(
     hf_files = list(hf_dir.glob("*.json")) if hf_dir.exists() else []
     hf_path_str = ", ".join(str(f) for f in hf_files) if hf_files else "Not available"
 
+    # Reference paths (cuda-wheels catalog, comfy-env tool, example node packs)
+    cuda_wheels_path = CUDA_WHEELS_DIR if CUDA_WHEELS_DIR.exists() else "Not available"
+    comfy_env_path = COMFY_ENV_DIR if COMFY_ENV_DIR.exists() else "Not available"
+    example_packs_existing = [p for p in EXAMPLE_NODE_PACKS if p.exists()]
+    example_packs_str = (
+        "\n".join(f"- {p}" for p in example_packs_existing)
+        if example_packs_existing else "Not available"
+    )
+
     # Build prompt with paths (let Claude read them)
     prompt = get_initial_assessment_prompt().format(
         project_name=wrapper_dir.name,
@@ -674,6 +696,9 @@ def assess(
         paper_path=paper_path if paper_path.exists() else "Not available",
         info_path=info_path if info_path.exists() else "Not available",
         hf_path=hf_path_str,
+        cuda_wheels_path=cuda_wheels_path,
+        comfy_env_path=comfy_env_path,
+        example_node_packs=example_packs_str,
     )
 
     # Launch Claude interactively

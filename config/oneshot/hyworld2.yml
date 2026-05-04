@@ -1,0 +1,6 @@
+name: HYWorld2
+package_name: ComfyUI-HYWorld2
+github: https://github.com/Tencent-Hunyuan/HY-World-2.0
+huggingface: https://huggingface.co/tencent/HY-World-2.0
+paper: https://3d-models.hunyuan.tencent.com/world/world2_0/HY_World_2_0.pdf
+website: https://3d.hunyuan.tencent.com/sceneTo3D
