@@ -1,0 +1,5 @@
+folder_name: lito
+conda_env_name: lito
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-Lito
