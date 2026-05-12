@@ -43,10 +43,10 @@ dependencies = [
     # Google Sheets
     "gspread>=5.12.0",
     "google-auth>=2.0.0",
-]
 
-[project.optional-dependencies]
-pdf = ["marker-pdf>=1.0.0"]
+    # PDF → markdown (oneshot paper conversion)
+    "marker-pdf>=1.0.0",
+]
 
 [project.scripts]
 cds = "main:app"

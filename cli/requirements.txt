@@ -22,3 +22,6 @@ pyyaml>=6.0.0
 
 # Discord bot
 discord.py>=2.3.0
+
+# PDF → markdown (oneshot paper conversion)
+marker-pdf>=1.0.0

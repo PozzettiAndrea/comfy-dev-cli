@@ -1,0 +1,6 @@
+name: Pixal3D
+package_name: ComfyUI-Pixal3D
+github: https://github.com/TencentARC/Pixal3D
+huggingface: https://huggingface.co/TencentARC/Pixal3D
+paper: https://arxiv.org/abs/2605.10922
+website: https://ldyang694.github.io/projects/pixal3d/

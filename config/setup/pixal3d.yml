@@ -1,0 +1,5 @@
+folder_name: pixal3d
+conda_env_name: pixal3d
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-Pixal3D
