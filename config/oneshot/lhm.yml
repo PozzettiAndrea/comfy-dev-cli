@@ -1,0 +1,6 @@
+name: LHM
+package_name: ComfyUI-LHM
+github: https://github.com/aigc3d/LHM
+huggingface: https://huggingface.co/3DAIGC/LHM-1B
+paper: https://arxiv.org/abs/2503.10625
+website: https://aigc3d.github.io/projects/LHM/

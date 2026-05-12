@@ -1,0 +1,6 @@
+name: Video2World
+package_name: ComfyUI-Video2World
+github: https://github.com/lukasHoel/video_to_world
+huggingface:
+paper: https://arxiv.org/abs/2603.16736
+website: https://lukashoel.github.io/video_to_world/

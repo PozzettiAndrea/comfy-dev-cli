@@ -1,0 +1,6 @@
+name: LiTo
+package_name: ComfyUI-LiTo
+github: https://github.com/apple/ml-lito
+huggingface:
+paper: https://arxiv.org/abs/2603.11047
+website: https://apple.github.io/ml-lito/

@@ -299,15 +299,25 @@ def switch(
 
 
 def find_wrapper_dir():
-    """Find package directory in oneshots directory (has inputs.yml)."""
-    # Ensure oneshots directory exists
+    """Find package directory in oneshots dir for the active config (else fall back)."""
     ONESHOTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Look for directories with inputs.yml (indicates a wrapper package)
+    # Prefer the wrapper matching the active config — switching must be respected.
+    active = get_active_config()
+    if active:
+        config = load_oneshot_config(active)
+        if config:
+            package_name = config.get("package_name", f"wrapper_{active}")
+            active_wrapper = ONESHOTS_DIR / package_name
+            if (active_wrapper / "inputs.yml").exists():
+                return active_wrapper
+            # Active config exists but its wrapper isn't initialized yet.
+            return None
+
+    # No active config: fall back to most recently modified wrapper.
     wrapper_dirs = [d.parent for d in ONESHOTS_DIR.glob("*/inputs.yml")]
     if not wrapper_dirs:
         return None
-    # Return most recently modified
     return max(wrapper_dirs, key=lambda p: p.stat().st_mtime)
 
 
@@ -442,26 +452,24 @@ def _run_setup(name: str, config: dict):
     # Use package_name from config if specified, otherwise use config name
     package_name = config.get("package_name", f"wrapper_{name}")
 
-    # Primary: local wrapper directory in oneshots dir
-    local_wrapper = find_wrapper_dir()
-    if not local_wrapper:
-        # Create local wrapper in oneshots directory
-        ONESHOTS_DIR.mkdir(parents=True, exist_ok=True)
-        local_wrapper = ONESHOTS_DIR / package_name
+    # Primary: local wrapper directory in oneshots dir (specific to this config)
+    ONESHOTS_DIR.mkdir(parents=True, exist_ok=True)
+    local_wrapper = ONESHOTS_DIR / package_name
+    if local_wrapper.exists():
+        console.print(f"[cyan]Using wrapper:[/cyan] {local_wrapper}")
+    else:
         local_wrapper.mkdir(exist_ok=True)
         console.print(f"[green]Created wrapper:[/green] {local_wrapper}")
-    else:
-        console.print(f"[cyan]Using wrapper:[/cyan] {local_wrapper}")
 
     show_pipeline_status(local_wrapper, "setup")
 
-    # Create/update inputs.yml from config
+    # Create/update inputs.yml from config (coerce None → "" so .strip() is safe downstream)
     inputs = {
-        "github": config.get("github", ""),
-        "website": config.get("website", ""),
-        "huggingface": config.get("huggingface", ""),
-        "paper": config.get("paper", ""),
-        "comfyui-repo-link": config.get("comfyui-repo-link", ""),
+        "github": config.get("github") or "",
+        "website": config.get("website") or "",
+        "huggingface": config.get("huggingface") or "",
+        "paper": config.get("paper") or "",
+        "comfyui-repo-link": config.get("comfyui-repo-link") or "",
     }
 
     # Write to local wrapper (primary)
@@ -517,7 +525,7 @@ def _run_pullall(wrapper_dir: Path, inputs: dict):
     }
 
     # 1. Clone GitHub repo
-    github_url = inputs.get("github", "").strip()
+    github_url = (inputs.get("github") or "").strip()
     if github_url:
         owner, repo = parse_github_url(github_url)
         if owner and repo:
@@ -544,7 +552,7 @@ def _run_pullall(wrapper_dir: Path, inputs: dict):
         console.print(f"[yellow]○[/yellow] No GitHub URL specified")
 
     # 2. Download paper PDF and convert to markdown
-    paper_url = inputs.get("paper", "").strip()
+    paper_url = (inputs.get("paper") or "").strip()
     if paper_url:
         pdf_path = wrapper_dir / "paper.pdf"
         md_path = wrapper_dir / "paper.md"
@@ -595,7 +603,7 @@ def _run_pullall(wrapper_dir: Path, inputs: dict):
         console.print(f"[dim]○[/dim] No paper URL specified")
 
     # 3. Fetch HuggingFace model info
-    hf_url = inputs.get("huggingface", "").strip()
+    hf_url = (inputs.get("huggingface") or "").strip()
     if hf_url:
         hf_dir = wrapper_dir / "hf_models"
         hf_dir.mkdir(exist_ok=True)
@@ -618,7 +626,7 @@ def _run_pullall(wrapper_dir: Path, inputs: dict):
         console.print(f"[dim]○[/dim] No HuggingFace URL specified")
 
     # 4. Note website (just store in info, nothing to download)
-    website_url = inputs.get("website", "").strip()
+    website_url = (inputs.get("website") or "").strip()
     if website_url:
         console.print(f"[green]✓[/green] Website: {website_url}")
     else:
