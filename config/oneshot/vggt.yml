@@ -1,0 +1,6 @@
+name: VGGT
+package_name: ComfyUI-VGGT
+github: https://github.com/facebookresearch/vggt
+huggingface: https://huggingface.co/facebook/VGGT-1B
+paper: https://arxiv.org/abs/2503.11651
+website: https://vgg-t.github.io/

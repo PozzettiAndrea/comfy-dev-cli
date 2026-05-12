@@ -1,0 +1,6 @@
+name: PanoNormal
+package_name: ComfyUI-PanoNormal
+github: https://github.com/huangkun101230/PanoNormal
+huggingface:
+paper: https://arxiv.org/abs/2405.18745
+website:

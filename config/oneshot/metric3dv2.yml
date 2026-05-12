@@ -1,0 +1,6 @@
+name: Metric3Dv2
+package_name: ComfyUI-Metric3Dv2
+github: https://github.com/YvanYin/Metric3D
+huggingface: https://huggingface.co/JUGGHM/Metric3D
+paper: https://arxiv.org/abs/2404.15506
+website: https://jugghm.github.io/Metric3Dv2/
