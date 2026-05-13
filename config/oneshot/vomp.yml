@@ -1,0 +1,6 @@
+name: VoMP
+package_name: ComfyUI-VoMP
+github: https://github.com/nv-tlabs/VoMP
+huggingface: https://huggingface.co/nvidia/PhysicalAI-Simulation-VoMP-Model
+paper: https://arxiv.org/abs/2510.22975
+website: https://research.nvidia.com/labs/sil/projects/vomp/

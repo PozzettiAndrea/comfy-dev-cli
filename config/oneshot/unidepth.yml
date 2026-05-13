@@ -1,0 +1,6 @@
+name: UniDepth
+package_name: ComfyUI-UniDepth
+github: https://github.com/lpiccinelli-eth/UniDepth
+huggingface: https://huggingface.co/lpiccinelli/unidepth-v2-vitl14
+paper: https://arxiv.org/abs/2502.20110
+website: https://lpiccinelli-eth.github.io/pub/unidepth/

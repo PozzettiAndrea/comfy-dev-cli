@@ -1,0 +1,5 @@
+folder_name: vomp
+conda_env_name: vomp
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-VoMP
