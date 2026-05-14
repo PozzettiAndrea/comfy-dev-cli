@@ -1,0 +1,5 @@
+folder_name: moge2
+conda_env_name: moge2
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-MoGe2

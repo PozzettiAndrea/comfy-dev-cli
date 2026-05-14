@@ -1,0 +1,6 @@
+name: MoGe-2
+package_name: ComfyUI-MoGe2
+github: https://github.com/microsoft/MoGe
+huggingface: https://huggingface.co/Ruicheng/moge-2-vitl-normal
+paper: https://arxiv.org/abs/2507.02546
+website: https://wangrc.site/MoGe2Page/
