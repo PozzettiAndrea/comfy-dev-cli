@@ -195,20 +195,18 @@ def run_direct(repo_path: Path, platform_name: str = "windows", gpu: bool = Fals
     if gpu:
         os.environ["COMFY_TEST_GPU"] = "1"
 
-    # Build comfy-test command
-    cmd = ["comfy-test", "run", "--platform", platform_name, "--branch", branch]
+    # Build comfy-test command. (Don't pass --platform / --verbose /
+    # --full-mem-log — current comfy-test auto-detects the OS via
+    # sys.platform and has dropped those three flags.)
+    cmd = ["comfy-test", "run", "--branch", branch]
     if gpu:
         cmd.append("--gpu")
-    if verbose:
-        cmd.append("--verbose")
     if workflow:
         cmd.extend(["--workflow", workflow])
     if force:
         cmd.append("--force")
     if novram:
         cmd.append("--novram")
-    if full_mem_log:
-        cmd.append("--full-mem-log")
     if vram_debug:
         cmd.append("--vram-debug")
 

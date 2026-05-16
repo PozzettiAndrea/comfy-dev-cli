@@ -1,0 +1,6 @@
+name: HY-Pano-2
+package_name: ComfyUI-HYPano2
+github: https://github.com/Tencent-Hunyuan/HY-World-2.0
+huggingface: https://huggingface.co/tencent/HY-World-2.0
+paper: https://arxiv.org/abs/2604.14268
+website: https://3d-models.hunyuan.tencent.com/world/

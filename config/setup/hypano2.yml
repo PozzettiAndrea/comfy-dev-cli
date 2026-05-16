@@ -1,0 +1,5 @@
+folder_name: hypano2
+conda_env_name: hypano2
+
+nodes_to_install:
+  - https://github.com/PozzettiAndrea/ComfyUI-HYPano2
