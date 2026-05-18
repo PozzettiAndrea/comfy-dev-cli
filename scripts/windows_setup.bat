@@ -41,7 +41,7 @@ for %%I in ("%SCRIPT_DIR%\..") do set "PROJECT_ROOT=%%~fI"
 
 :: ================= cds CLI (global) ==========
 echo Installing cds CLI...
-uv tool install --force --editable "%PROJECT_ROOT%\cli"
+uv tool install --force --python 3.12 --editable "%PROJECT_ROOT%\cli"
 if errorlevel 1 (
   echo WARNING: cds CLI install failed
 ) else (
