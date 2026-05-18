@@ -13,7 +13,7 @@ set "PATH=%USERPROFILE%\.local\bin;%PATH%"
 where claude >nul 2>&1
 if errorlevel 1 (
   echo Installing Claude Code...
-  npm install -g @anthropic-ai/claude-code
+  call npm install -g @anthropic-ai/claude-code
   if errorlevel 1 (
     echo WARNING: Claude install failed. Make sure Node.js/npm is installed.
   ) else (
